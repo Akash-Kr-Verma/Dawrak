@@ -9,15 +9,16 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Initialize OpenAI Client
+// Initialize OpenAI Client (via Groq)
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '',
+  apiKey: process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || '',
+  baseURL: 'https://api.groq.com/openai/v1',
 });
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { userId, scenarioId, userReasoning, scenarioContext } = body;
+    const { userId, scenarioId, userReasoning, scenarioContext, sourceUrl, noSourceFound } = body;
 
     // 1. Input Payload Validation
     if (!userId || typeof userId !== 'string') {
@@ -29,6 +30,11 @@ export async function POST(req: Request) {
     if (!userReasoning || typeof userReasoning !== 'string' || userReasoning.trim().length < 15) {
       return NextResponse.json({ error: 'userReasoning must be at least 15 characters long' }, { status: 400 });
     }
+    if (!noSourceFound) {
+      if (!sourceUrl || typeof sourceUrl !== 'string' || (!sourceUrl.startsWith('http://') && !sourceUrl.startsWith('https://'))) {
+        return NextResponse.json({ error: 'sourceUrl must be a valid http or https URL' }, { status: 400 });
+      }
+    }
     if (!scenarioContext || typeof scenarioContext !== 'object') {
       return NextResponse.json({ error: 'Missing or invalid scenarioContext' }, { status: 400 });
     }
@@ -36,17 +42,37 @@ export async function POST(req: Request) {
     // 2. LLM System Prompt & JSON Formatting
     const systemPrompt = `
 You are an encouraging, expert Media Literacy AI Coach.
-Your task is to evaluate the user's typed reasoning against the correct verdict and the provided grading rubric.
+Your task is to evaluate the user's typed reasoning and their verification source against the correct verdict and the provided grading rubric.
 
-Rule 1 (No Binary Shaming): Focus on the quality of reasoning rather than just a right/wrong answer. Be encouraging.
-Rule 2 (Specific Reference): You MUST explicitly quote or reference at least one phrase the user typed in their reasoning to show you read it.
+Grading Rubric:
+1. Evaluate Reasoning (50% of score): Check analytical depth and identification of red flags in their reasoning.
+2. Audit Source Credibility (50% of score): Check the provided verification source URL.
+
+RULE 1 — GIBBERISH / RANDOM TEXT DETECTION: If userReasoning is random keyboard mashing, irrelevant filler text, or under 15 words of genuine analysis, assign a score between 5 and 15. Set verdictTitle to "Invalid Analysis — Gibberish Detected" and explicitly state in personalizedFeedback: "Your submission appears to be random text rather than a critical media literacy analysis. To evaluate a claim, you must explain specific red flags..."
+
+RULE 2 — SOURCE CREDIBILITY & FAKE LINK AUDIT: Check the sourceUrl string:
+- If it is empty, random characters, a broken link, or a non-existent domain, set sourceAudit to: "FAILED AUDIT: The provided link is not a recognized or valid verification source. Always cite reputable registries like Snopes, Reuters, or official institutional domains."
+- If it is a valid government (.gov), academic (.edu), or IFCN fact-checker domain (Reuters, Snopes, PolitiFact, BBC, AltNews, BoomLive), commend it explicitly.
+- If it is a social media link, unverified blog, or tabloid, deduct points and explicitly warn the user about domain bias and secondary-source unreliability.
+
+SPECIAL CASE: Absence of Official Source (noSourceFound: true):
+If the user checked noSourceFound: true, they are asserting that this claim is a scam/fake because no official press release or notification exists on primary channels.
+AI Evaluation Rule:
+Verify Logical Channel: Did the user check the right official portal for this specific topic? (e.g., Checking education.gov.in for a laptop scheme, or rbi.org.in for a banking alert).
+- If the user checked a relevant official domain: Highly commend them in sourceAudit! Response format: "EXCELLENT LATERAL READING: You correctly checked primary official channels ([Domain Name]) and identified that no such scheme or press release exists. Proving the absence of official confirmation is a key defense against WhatsApp forwards."
+- If the user typed a non-relevant domain or left it vague: Coach them nicely in sourceAudit: "You correctly recognized that this scheme lacks official backing. However, to be thorough, specify which official portal you checked (for instance, the official Ministry of Education domain at education.gov.in) to confirm there was no notification."
+
+Rule 3: Focus on the quality of reasoning and the credibility of the source. Be encouraging unless gibberish is detected.
+Rule 4: You MUST explicitly quote or reference at least one phrase the user typed in their reasoning (unless it is gibberish).
+Rule 5: You MUST explicitly mention the source URL they provided in your source audit.
 
 Expected JSON Output Schema:
 {
-  "score": <Integer between 0 and 100 based on analytical depth>,
-  "verdictTitle": "<Concise summary badge, e.g., Sharp Analysis — Red Flags Identified>",
+  "score": <Integer between 0 and 100>,
+  "verdictTitle": "<Concise summary badge, e.g., Strong Analysis — Credible Source Cited>",
   "personalizedFeedback": "<Coaching text referencing user words>",
-  "keyLesson": "<Actionable MIL takeaway, e.g., Pro Tip: Always verify domain extensions>"
+  "sourceAudit": "<Specific feedback on the source URL provided, e.g. VERIFIED CREDIBLE: The domain cited is an IFCN-certified signatory.>",
+  "keyLesson": "<Actionable MIL takeaway>"
 }
 `;
 
@@ -54,7 +80,10 @@ Expected JSON Output Schema:
 Scenario Context:
 Title: ${scenarioContext.title || 'Unknown'}
 Verdict: ${scenarioContext.verdict || 'Unknown'}
-Grading Rubric: ${scenarioContext.gradingRubric ? JSON.stringify(scenarioContext.gradingRubric) : 'N/A'}
+
+User's Verification Source URL:
+"${sourceUrl}"
+noSourceFound Checked: ${noSourceFound}
 
 User's Reasoning:
 "${userReasoning}"
@@ -68,7 +97,7 @@ User's Reasoning:
       );
 
       const aiResponsePromise = openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'llama-3.3-70b-versatile',
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },
@@ -85,15 +114,17 @@ User's Reasoning:
       if (typeof result.score !== 'number') result.score = 50;
       if (!result.verdictTitle) result.verdictTitle = "Analysis Completed";
       if (!result.personalizedFeedback) result.personalizedFeedback = "Good effort on analyzing this scenario.";
+      if (!result.sourceAudit) result.sourceAudit = "Source evaluation completed.";
       if (!result.keyLesson) result.keyLesson = "Pro Tip: Always verify sources.";
 
     } catch (aiError) {
-      console.error('AI Processing Error:', aiError);
+      console.error("❌ [/api/feedback] AI EVALUATION FAILED:", aiError);
       // Graceful fallback JSON response so UI never crashes
       result = {
         score: 50,
         verdictTitle: "Analysis Completed — Keep Practicing",
         personalizedFeedback: "You made a solid attempt at reasoning through this scenario. Let's keep refining your media literacy skills.",
+        sourceAudit: "UNVERIFIED: We couldn't automatically verify your source this time.",
         keyLesson: "Pro Tip: Always double-check the original source of any sensational claim."
       };
     }
