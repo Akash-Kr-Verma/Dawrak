@@ -1,319 +1,567 @@
+// src/app/(dashboard)/mentor/page.tsx
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
-import { 
-  UploadCloud, 
-  CheckCircle2, 
-  FileImage, 
-  Users, 
-  FileText, 
-  Lightbulb, 
-  ArrowRight
-} from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { useProfile } from "@/hooks/useProfile";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import {
+  Users,
+  Share2,
+  Loader2,
+  Sparkles,
+  UserPlus,
+  Copy,
+  Check,
+  X,
+  Lock,
+  Upload,
+  Camera,
+  Video,
+  FileCheck,
+  Zap,
+  Award,
+} from "lucide-react";
 
-export default function MentorHub() {
-  const { profile } = useProfile();
-  const [sessionsCount, setSessionsCount] = useState(42);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+interface LearnerNode {
+  id: string;
+  learner_name: string;
+  relationship: string;
+  topic_taught: string;
+  proof_preview?: string;
+  created_at: string;
+}
+
+export default function MentorHubPage() {
+  const { user, loading: authLoading } = useAuth();
+  const [completedModule, setCompletedModule] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Tree & Learners State
+  const [verifiedLearners, setVerifiedLearners] = useState<LearnerNode[]>([]);
+
+  // Modals
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showProofModal, setShowProofModal] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Proof Form State
+  const [learnerName, setLearnerName] = useState("");
+  const [relationship, setRelationship] = useState("Family Member");
+  const [topicTaught, setTopicTaught] = useState("Chapter 1: Lateral Reading & WhatsApp Scams");
+  const [notes, setNotes] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [submittingProof, setSubmittingProof] = useState(false);
 
   useEffect(() => {
-    const fetchRippleCount = async () => {
-      if (!profile || profile.id === "demo-user-id") return;
-      
+    const fetchMentorData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const { count, error } = await supabase
-          .from("taught_sessions")
-          .select("*", { count: "exact", head: true })
-          .eq("mentor_id", profile.id);
-          
-        if (count !== null) setSessionsCount(count);
+        // Check if user completed Module 1
+        const { data: prog } = await supabase
+          .from("user_module_progress")
+          .select("completed_lessons")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (prog && prog.completed_lessons >= 5) {
+          setCompletedModule(true);
+        } else {
+          setCompletedModule(false);
+        }
+
+        // Fetch logged mentoring sessions from Supabase
+        const { data: sessions } = await supabase
+          .from("mentoring_sessions")
+          .select("*")
+          .eq("mentor_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (sessions && sessions.length > 0) {
+          setVerifiedLearners(
+            sessions.map((s: any) => ({
+              id: s.id,
+              learner_name: s.learner_name,
+              relationship: s.relationship || "Learner",
+              topic_taught: s.topic_taught,
+              proof_preview: s.proof_file_url,
+              created_at: s.created_at,
+            }))
+          );
+        }
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching mentor data:", err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchRippleCount();
-  }, [profile]);
 
-  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setSelectedFile(e.dataTransfer.files[0]);
+    if (!authLoading) {
+      fetchMentorData();
     }
-  };
+  }, [user, authLoading]);
 
+  // Handle Image/Video File Selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setProofFile(file);
+      setProofPreview(URL.createObjectURL(file));
     }
   };
+
+  // Quick-Fill Sample Proof for Hackathon Stage Demo
+  const handleDemoQuickFill = () => {
+    setLearnerName("Mom (Sunita)");
+    setRelationship("Mother");
+    setTopicTaught("Spotting WhatsApp Forwarded Loan & Phishing Scams");
+    setNotes("We sat together and analyzed a suspicious WhatsApp message asking to click an APK link. Checked RBI official portal together!");
+    setProofPreview("https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80"); // Sample workshop photo
+  };
+
+  // Submit Verified Mentoring Session
+  const handleSubmitProof = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!learnerName.trim() || !user) return;
+
+    setSubmittingProof(true);
+
+    const newNode: LearnerNode = {
+      id: `local-${Date.now()}`,
+      learner_name: learnerName,
+      relationship: relationship,
+      topic_taught: topicTaught,
+      proof_preview: proofPreview || undefined,
+      created_at: new Date().toISOString(),
+    };
+
+    try {
+      // Save to Supabase (non-blocking fallback for stage demo)
+      const { error } = await supabase.from("mentoring_sessions").insert({
+        mentor_id: user.id,
+        learner_name: learnerName,
+        relationship: relationship,
+        topic_taught: topicTaught,
+        proof_file_url: proofPreview || "Verified offline session",
+        notes: notes,
+      });
+
+      if (error) {
+        console.warn("⚠️ Supabase sessions table notice (using UI fallback):", error.message);
+      }
+    } catch (err) {
+      console.error("Error saving proof:", err);
+    } finally {
+      // Instantly grow the tree in UI
+      setVerifiedLearners((prev) => [newNode, ...prev]);
+      setShowProofModal(false);
+      setLearnerName("");
+      setNotes("");
+      setProofFile(null);
+      setProofPreview(null);
+      setSubmittingProof(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    const shareUrl = `${window.location.origin}/share/demo-mentor-${user?.id?.slice(0, 8)}`;
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  if (authLoading || loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+      </div>
+    );
+  }
+
+  const learnersCount = verifiedLearners.length;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans text-slate-900">
-      <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Header & Active Mentor Badge */}
-        <header className="space-y-4">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
-                Mentor Hub & Ripple Tree
-              </h1>
-              <p className="text-lg text-slate-600 mt-2 max-w-2xl">
-                Your wisdom ripples through the community. Watch as your seeds of knowledge grow into a forest of critical thinkers.
-              </p>
-            </div>
-            <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-800 px-4 py-2 rounded-full font-semibold text-sm shadow-sm">
-              <span>✨</span> Community Beacon ({sessionsCount} People Reached)
-            </div>
+    <ProtectedRoute>
+      <div className="max-w-5xl mx-auto space-y-6 pb-20">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              Mentor Hub & Ripple Tree
+            </h1>
+            <p className="text-slate-500 text-sm mt-0.5">
+              Your wisdom ripples through the community. Log verified teaching sessions to grow your tree of critical thinkers.
+            </p>
           </div>
-        </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Main Column (Tree & Dropzone) */}
-          <div className="lg:col-span-8 space-y-8">
-            
-            {/* The Visual Knowledge Tree */}
-            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative min-h-[400px] flex flex-col">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <Users className="w-5 h-5 text-indigo-600" />
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-xs font-bold text-indigo-900">
+            <Sparkles className="w-4 h-4 text-indigo-600" />
+            <span>Community Beacon ({learnersCount} People Reached)</span>
+          </div>
+        </div>
+
+        {/* Main Content Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Knowledge Tree & Learners Canvas */}
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between min-h-[420px]">
+            {/* Card Header */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-slate-900" />
+                <h2 className="text-base font-black text-slate-900">
                   Your Knowledge Tree
                 </h2>
-                <div className="text-sm font-medium text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">
-                  {sessionsCount} Total Secondary Learners Reached
-                </div>
               </div>
-              
-              <div className="flex-1 relative bg-slate-50 p-8 flex items-center justify-center min-h-[350px]">
-                {/* Decorative connecting lines (Simplified SVG for visual rep) */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
-                  <line x1="50%" y1="50%" x2="25%" y2="25%" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 4" />
-                  <line x1="50%" y1="50%" x2="50%" y2="20%" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 4" />
-                  <line x1="50%" y1="50%" x2="75%" y2="25%" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 4" />
-                  
-                  {/* Secondary branches */}
-                  <line x1="25%" y1="25%" x2="15%" y2="15%" stroke="#94a3b8" strokeWidth="1" />
-                  <line x1="25%" y1="25%" x2="35%" y2="10%" stroke="#94a3b8" strokeWidth="1" />
-                  
-                  <line x1="75%" y1="25%" x2="85%" y2="15%" stroke="#94a3b8" strokeWidth="1" />
-                  <line x1="75%" y1="25%" x2="90%" y2="35%" stroke="#94a3b8" strokeWidth="1" />
-                </svg>
-
-                {/* You (Center Node) */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-                  <motion.div
-                    animate={{
-                      boxShadow: ["0px 0px 0px 0px rgba(79, 70, 229, 0.4)", "0px 0px 0px 20px rgba(79, 70, 229, 0)"],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "easeOut",
-                    }}
-                    className="w-20 h-20 bg-indigo-900 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-xl border-4 border-white"
-                  >
-                    You
-                  </motion.div>
-                </div>
-
-                {/* Level 1 Nodes */}
-                <div className="absolute top-[25%] left-[25%] -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-2">
-                  <div className="w-14 h-14 bg-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg border-2 border-white">
-                    Mom
-                  </div>
-                </div>
-                <div className="absolute top-[20%] left-[50%] -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-2">
-                  <div className="w-14 h-14 bg-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg border-2 border-white">
-                    Alex
-                  </div>
-                </div>
-                <div className="absolute top-[25%] left-[75%] -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-2">
-                  <div className="w-14 h-14 bg-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg border-2 border-white text-center leading-tight">
-                    Grandma
-                  </div>
-                </div>
-
-                {/* Level 2 Nodes (Secondary) */}
-                <div className="absolute top-[15%] left-[15%] -translate-x-1/2 -translate-y-1/2 z-10">
-                  <div className="w-8 h-8 bg-teal-500 rounded-full shadow-md border-2 border-white"></div>
-                </div>
-                <div className="absolute top-[10%] left-[35%] -translate-x-1/2 -translate-y-1/2 z-10">
-                  <div className="w-8 h-8 bg-teal-500 rounded-full shadow-md border-2 border-white"></div>
-                </div>
-                
-                <div className="absolute top-[15%] left-[85%] -translate-x-1/2 -translate-y-1/2 z-10">
-                  <div className="w-8 h-8 bg-teal-500 rounded-full shadow-md border-2 border-white"></div>
-                </div>
-                <div className="absolute top-[35%] left-[90%] -translate-x-1/2 -translate-y-1/2 z-10">
-                  <div className="w-8 h-8 bg-teal-500 rounded-full shadow-md border-2 border-white"></div>
-                </div>
-                
-              </div>
-            </section>
-
-            {/* Offline Teaching Verification Portal */}
-            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold mb-2">Verify an Offline Teaching Session</h2>
-                <p className="text-slate-600">
-                  Taught a friend or family member offline? Upload a photo or short video clip (&lt;60s) of your session to verify your impact badge.
-                </p>
-              </div>
-
-              <div 
-                className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer group"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleFileDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  className="hidden" 
-                  accept="image/*,video/*"
-                  onChange={handleFileChange}
-                />
-                <div className="flex flex-col items-center justify-center gap-4">
-                  <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <UploadCloud className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-700">Click to upload or drag and drop</p>
-                    <p className="text-sm text-slate-500 mt-1">SVG, PNG, JPG, or MP4 (max. 800x400px)</p>
-                  </div>
-                </div>
-              </div>
-
-              {selectedFile && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-6 flex flex-col sm:flex-row items-center justify-between bg-emerald-50 border border-emerald-100 rounded-lg p-4 gap-4"
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowProofModal(true)}
+                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm"
                 >
-                  <div className="flex items-center gap-3 w-full sm:w-auto overflow-hidden">
-                    <div className="bg-emerald-100 p-2 rounded-md shrink-0">
-                      <FileImage className="w-6 h-6 text-emerald-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-emerald-900 truncate">
-                        {selectedFile.name}
-                      </p>
-                      <p className="text-xs text-emerald-700 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Ready for upload
-                      </p>
-                    </div>
-                  </div>
-                  <button className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors shrink-0 shadow-sm">
-                    Submit Proof for +100 PTS
-                  </button>
-                </motion.div>
-              )}
-            </section>
-
-          </div>
-
-          {/* Side Column (Nutrition Label & Quick Actions) */}
-          <div className="lg:col-span-4 space-y-8">
-            
-            {/* Media Nutrition Diet Label */}
-            <section className="bg-white border-[3px] border-black p-5 font-sans relative">
-              <h2 className="text-4xl font-black uppercase tracking-tighter border-b-[8px] border-black pb-2 mb-2">
-                Nutrition Facts
-              </h2>
-              <p className="text-sm font-bold border-b-4 border-black pb-1 mb-3">
-                Your Media Diet Health
-              </p>
-
-              <div className="space-y-3 font-medium">
-                
-                {/* Item */}
-                <div className="flex justify-between items-end border-b border-black pb-1">
-                  <div>
-                    <span className="font-bold text-lg">Fact-Checking Stamina</span>
-                  </div>
-                  <span className="font-bold text-lg">85%</span>
-                </div>
-                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mb-2">
-                  <div className="bg-black h-full w-[85%] rounded-full"></div>
-                </div>
-
-                {/* Item */}
-                <div className="flex justify-between items-center border-b border-black pb-2 pt-2">
-                  <span className="font-bold">Critical Thinking Calories</span>
-                  <span className="font-bold bg-slate-900 text-white px-2 py-0.5 rounded text-sm">HIGH</span>
-                </div>
-
-                {/* Item */}
-                <div className="flex justify-between items-center border-b border-black pb-2 pt-2">
-                  <span className="font-bold">Propaganda Consumed</span>
-                  <span className="font-bold text-emerald-600">0g</span>
-                </div>
-
-                {/* Item */}
-                <div className="flex justify-between items-center border-b border-black pb-2 pt-2">
-                  <span className="font-bold">Verified Sources Shared</span>
-                  <span className="font-bold text-lg">14 Articles</span>
-                </div>
-
-                {/* Item */}
-                <div className="flex justify-between items-center pt-2">
-                  <span className="font-bold text-indigo-700">Ripple Mentorship Score</span>
-                  <span className="font-bold text-indigo-700">3 Mentees</span>
-                </div>
-
-              </div>
-
-              <div className="border-t-[8px] border-black mt-4 pt-2 text-xs leading-tight text-slate-600">
-                * Percent Daily Values are based on a consistent routine of questioning sources, reading past headlines, and sharing verified facts.
-              </div>
-            </section>
-
-            {/* Quick Actions */}
-            <div className="space-y-4">
-              
-              {/* Pending Reviews */}
-              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="bg-indigo-100 text-indigo-600 p-2 rounded-lg">
-                    <FileText className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-indigo-900">Pending Reviews</h3>
-                    <p className="text-sm text-indigo-700 mt-1">2 incoming answers from mentees need your feedback.</p>
-                  </div>
-                </div>
-                <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
-                  Review & Add Mentor Take <ArrowRight className="w-4 h-4" />
+                  <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Log Teaching Proof</span>
                 </button>
               </div>
-
-              {/* Submit to Questions Bank */}
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="bg-amber-100 text-amber-600 p-2 rounded-lg">
-                    <Lightbulb className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-amber-900">Questions Bank</h3>
-                    <p className="text-sm text-amber-700 mt-1">Found a tricky piece of misinformation? Turn it into a scenario.</p>
-                  </div>
-                </div>
-                <button className="w-full bg-amber-500 hover:bg-amber-600 text-white font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm">
-                  Submit New Scenario
-                </button>
-              </div>
-
             </div>
 
+            {/* Tree Canvas */}
+            <div className="flex-1 flex flex-col items-center justify-center py-8">
+              {learnersCount === 0 ? (
+                <div className="text-center max-w-sm space-y-3 px-4">
+                  <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100 shadow-sm">
+                    <UserPlus className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-base font-black text-slate-900">
+                    Your Tree is Waiting for Its First Seed
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Taught someone how to spot fake news? Click <strong className="text-slate-800">"Log Teaching Proof"</strong> above to upload a photo/video and watch their branch grow!
+                  </p>
+                </div>
+              ) : (
+                <div className="w-full space-y-6">
+                  {/* Center Node ("You") */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-16 h-16 bg-slate-900 text-white font-black text-base rounded-full flex items-center justify-center shadow-lg ring-4 ring-emerald-100 z-10">
+                      You
+                    </div>
+                    <div className="w-0.5 h-6 bg-slate-300"></div>
+                  </div>
+
+                  {/* Dynamic Learner Nodes Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    {verifiedLearners.map((node) => (
+                      <div
+                        key={node.id}
+                        className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/40 flex items-start gap-3 shadow-sm animate-in fade-in zoom-in duration-300"
+                      >
+                        {node.proof_preview ? (
+                          <img
+                            src={node.proof_preview}
+                            alt="Proof"
+                            className="w-12 h-12 rounded-lg object-cover border border-emerald-300 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center shrink-0 text-sm">
+                            {node.learner_name.charAt(0)}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <h4 className="text-xs font-bold text-slate-900 truncate">
+                              {node.learner_name}
+                            </h4>
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-1.5 py-0.5 rounded">
+                              Verified
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                            {node.relationship}
+                          </p>
+                          <p className="text-[11px] text-emerald-900 font-medium truncate mt-1">
+                            📚 {node.topic_taught}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Toolbar */}
+            <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs text-slate-500 font-medium">
+                {learnersCount > 0
+                  ? `Your Ripple Tree has reached ${learnersCount} secondary learners.`
+                  : "Upload teaching sessions or share your digital invite."}
+              </span>
+
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+              >
+                <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Get Digital Share Link</span>
+              </button>
+            </div>
           </div>
 
+          {/* Nutrition Facts Card */}
+          <div className="bg-white rounded-2xl border-2 border-slate-900 p-6 shadow-sm space-y-4 self-start">
+            <div className="border-b-4 border-slate-900 pb-2">
+              <h2 className="text-2xl font-black tracking-tighter text-slate-900 uppercase">
+                NUTRITION FACTS
+              </h2>
+              <p className="text-xs font-bold text-slate-700">
+                Your Community Impact Diet
+              </p>
+            </div>
+
+            <div className="space-y-3 text-xs font-bold text-slate-900 divide-y divide-slate-200">
+              <div className="flex justify-between pt-1">
+                <span>Verified Mentoring Proofs</span>
+                <span className="text-emerald-700">{learnersCount} Logged</span>
+              </div>
+
+              <div className="flex justify-between pt-2">
+                <span>Fact-Checking Stamina</span>
+                <span className="text-emerald-700">
+                  {learnersCount > 0 || completedModule ? "100%" : "0%"}
+                </span>
+              </div>
+
+              <div className="flex justify-between pt-2">
+                <span>Ripple Tree Reach</span>
+                <span className="px-2 py-0.5 bg-slate-900 text-white rounded text-[10px]">
+                  {learnersCount === 0 ? "SEED" : learnersCount > 2 ? "FOREST" : "BRANCHING"}
+                </span>
+              </div>
+
+              <div className="flex justify-between pt-2">
+                <span>Propaganda Consumed</span>
+                <span className="text-emerald-700">0g</span>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* LOG MENTORING PROOF MODAL (PHOTO / VIDEO UPLOAD) */}
+        {showProofModal && (
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              {/* Modal Header */}
+              <div className="bg-slate-900 text-white p-5 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-emerald-400" />
+                  <div>
+                    <h3 className="text-base font-black">Verify Teaching Session</h3>
+                    <p className="text-[11px] text-slate-400">
+                      Upload a photo or video proof of your offline mentoring session.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowProofModal(false)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Form Body */}
+              <form onSubmit={handleSubmitProof} className="p-6 space-y-4 overflow-y-auto flex-1">
+                {/* Hackathon Quick-Fill Demo Button */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-amber-900 text-xs font-bold">
+                    <Zap className="w-4 h-4 text-amber-600" />
+                    <span>Hackathon Presenter Mode:</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDemoQuickFill}
+                    className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors"
+                  >
+                    Quick-Fill Sample Proof
+                  </button>
+                </div>
+
+                {/* Learner Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 mb-1">
+                      Learner's Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={learnerName}
+                      onChange={(e) => setLearnerName(e.target.value)}
+                      placeholder="e.g., Mom (Sunita), Alex"
+                      className="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 mb-1">
+                      Relationship
+                    </label>
+                    <select
+                      value={relationship}
+                      onChange={(e) => setRelationship(e.target.value)}
+                      className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                    >
+                      <option value="Mother / Father">Mother / Father</option>
+                      <option value="Grandparent">Grandparent</option>
+                      <option value="Sibling / Cousin">Sibling / Cousin</option>
+                      <option value="Classmate / Friend">Classmate / Friend</option>
+                      <option value="Community Member">Community Member</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Topic Taught */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                    What Topic Did You Teach Them? *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={topicTaught}
+                    onChange={(e) => setTopicTaught(e.target.value)}
+                    placeholder="e.g., Spotting WhatsApp Forwarded Phishing Links"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                  />
+                </div>
+
+                {/* Photo / Video Upload Area */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                    Photo / Video Proof (Session Snapshot)
+                  </label>
+                  <div className="border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-xl p-4 text-center cursor-pointer transition-colors relative bg-slate-50/50">
+                    <input
+                      type="file"
+                      accept="image/*,video/*"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    {proofPreview ? (
+                      <div className="space-y-2">
+                        <img
+                          src={proofPreview}
+                          alt="Proof Preview"
+                          className="max-h-36 mx-auto rounded-lg object-cover border border-slate-300 shadow-sm"
+                        />
+                        <p className="text-[11px] text-emerald-700 font-bold">
+                          ✓ Media attached • Click to replace
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 py-2">
+                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-slate-200">
+                          <Upload className="w-5 h-5 text-slate-600" />
+                        </div>
+                        <p className="text-xs font-bold text-slate-700">
+                          Click to upload Photo or Video
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          Supports PNG, JPG, MP4 (Max 15MB)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Session Notes */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                    Brief Session Notes (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="What viral claim did you check together?"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={submittingProof || !learnerName.trim()}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {submittingProof ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <FileCheck className="w-4 h-4" />
+                      <span>Verify & Grow Knowledge Tree</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Sharable Digital Link Modal */}
+        {showShareModal && (
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Share2 className="w-5 h-5 text-emerald-600" />
+                  <h3 className="text-base font-black text-slate-900">
+                    Your Digital Mentor Link
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="text-slate-400 hover:text-slate-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Send this link to family or friends in WhatsApp or Telegram groups. When they open it, they will review a scenario you verified!
+              </p>
+
+              <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <input
+                  type="text"
+                  readOnly
+                  value={`${typeof window !== "undefined" ? window.location.origin : ""}/share/demo-mentor-${user?.id?.slice(0, 8)}`}
+                  className="bg-transparent text-xs text-slate-700 font-mono w-full focus:outline-none"
+                />
+                <button
+                  onClick={handleCopyLink}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shrink-0 transition-colors flex items-center gap-1"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

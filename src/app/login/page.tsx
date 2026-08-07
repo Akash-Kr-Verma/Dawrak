@@ -47,23 +47,46 @@ export default function LoginPage() {
   const handleDemoLogin = async () => {
     setLoading(true);
     setError(null);
+    const demoEmail = "demo@playyourpart.org";
+    const demoPassword = "HackathonDemoPassword2026!";
+
     try {
-      // Signs in with pre-seeded demo user (or anonymous fallback)
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: "demo@playyourpart.org",
-        password: "HackathonDemoPassword2026!",
+      // 1. Attempt to sign in first
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: demoEmail,
+        password: demoPassword,
       });
 
-      if (signInError) {
-        // If demo account doesn't exist yet, create it instantly
-        await supabase.auth.signUp({
-          email: "demo@playyourpart.org",
-          password: "HackathonDemoPassword2026!",
+      // 2. If login fails because user doesn't exist, create the demo account instantly
+      if (signInError && signInError.message.toLowerCase().includes("invalid login")) {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: demoEmail,
+          password: demoPassword,
         });
+
+        if (signUpError) throw signUpError;
+
+        // Ensure we are signed in after signup
+        if (signUpData.session) {
+          router.push("/profile");
+          return;
+        }
+      } else if (signInError) {
+        throw signInError;
       }
+
+      // Successful Sign-In
       router.push("/profile");
     } catch (err: any) {
-      setError("Demo login unavailable. Please create a test account above.");
+      console.error("Demo Login Error:", err);
+      // Helpful error message if Email Confirmation is still turned ON in Supabase
+      if (err.message?.toLowerCase().includes("email not confirmed")) {
+        setError("Supabase Error: Please turn OFF 'Confirm email' in Supabase Auth -> Providers -> Email.");
+      } else if (err.message?.toLowerCase().includes("failed to fetch")) {
+        setError("Network Error: Check your .env.local keys and restart npm run dev.");
+      } else {
+        setError(err.message || "Demo login failed. Try creating a manual account above.");
+      }
     } finally {
       setLoading(false);
     }
