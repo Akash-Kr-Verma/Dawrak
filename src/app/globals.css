@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  color: #0F172A;
+  background-color: #F8FAFC;
+}
+
+/* Custom class for safe areas (useful for mobile safari/iOS wrappers) */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
