@@ -6,12 +6,18 @@ import OpenAI from 'openai';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const openai = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY,
-  baseURL: process.env.GROQ_API_KEY 
-    ? 'https://api.groq.com/openai/v1' 
-    : 'https://api.openai.com/v1',
-});
+// Lazy for the same reason as /api/feedback: constructing the SDK at module
+// scope with no key throws during `next build`'s page-data collection.
+function getOpenAI(): OpenAI | null {
+  const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  return new OpenAI({
+    apiKey,
+    baseURL: process.env.GROQ_API_KEY
+      ? 'https://api.groq.com/openai/v1'
+      : 'https://api.openai.com/v1',
+  });
+}
 
 export interface RichScenario {
   id: string;
@@ -54,6 +60,10 @@ export async function GET() {
         "viralReach": "e.g., 'Official Notification' or 'Forwarded 100k+ times'"
       }
     `;
+
+    const openai = getOpenAI();
+    // No key configured — fall straight through to the rotating fallback bank.
+    if (!openai) throw new Error('No AI API key configured');
 
     const completion = await openai.chat.completions.create({
       model: process.env.GROQ_API_KEY ? 'llama-3.3-70b-versatile' : 'gpt-4o-mini',

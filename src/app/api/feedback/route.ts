@@ -9,11 +9,15 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Initialize OpenAI Client (via Groq)
-const openai = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || '',
-  baseURL: 'https://api.groq.com/openai/v1',
-});
+// Initialize OpenAI Client (via Groq), lazily.
+// Constructing this at module scope breaks `next build`: the SDK throws
+// "Missing credentials" on an empty key, and Next evaluates route modules
+// during page-data collection, so a machine without a key can't build at all.
+function getOpenAI(): OpenAI | null {
+  const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  return new OpenAI({ apiKey, baseURL: 'https://api.groq.com/openai/v1' });
+}
 
 export async function POST(req: Request) {
   try {
@@ -91,6 +95,9 @@ User's Reasoning:
 
     let result;
     try {
+      const openai = getOpenAI();
+      if (!openai) throw new Error('No AI API key configured');
+
       // Include a safety timeout to prevent hanging the request
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('OpenAI Request Timeout')), 15000)
