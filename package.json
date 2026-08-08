@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "seed:modules": "node scripts/generate-module-seed.mjs",
-    "test:modules": "node supabase/tests/module-system.test.mjs"
+    "test:modules": "node supabase/tests/module-system.test.mjs",
+    "test:mentoring": "node supabase/tests/mentoring.test.mjs"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.10.0",

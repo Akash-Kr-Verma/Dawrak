@@ -171,6 +171,15 @@ export default function LearnPage() {
                         {FORMAT_LABEL[m.format]} · ~{Math.round(m.est_seconds / 60)} min ·
                         difficulty {m.difficulty}/5
                       </p>
+                      {/* Completing one module unlocks mentoring for that
+                          module alone — surfaced here, where it is earned. A
+                          penalty-free skip does not unlock it. */}
+                      {done && (
+                        <p className="text-[11px] text-emerald-700 font-medium flex items-center gap-1 mt-0.5">
+                          <Users className="w-3 h-3" />
+                          You can mentor this
+                        </p>
+                      )}
                     </div>
                   </div>
                   <span className="text-xs font-bold text-slate-700 shrink-0">

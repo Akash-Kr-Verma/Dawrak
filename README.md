@@ -75,10 +75,18 @@ The Learn tab runs the 10 finalized modules from `play-your-part-modules-final.m
 
 ### Applying the module system
 
-Run these two files in the Supabase SQL editor, in order. **The Learn tab will show an actionable "module tables not found" message until you do.**
+Run these three files in the Supabase SQL editor, in order. **The Learn tab will show an actionable "module tables not found" message until you do.**
 
-1. `supabase/migrations/0002_learning_modules.sql` — adds `learning_modules`, `module_attempts`, `user_module_progress`, the `learner_signal_profile` view and two helper functions. Additive: it does not touch `scenarios`, `attempts`, or `taught_sessions`, so the Daily Challenge tab keeps working.
-2. `supabase/seed_modules.sql` — inserts the 10 modules. Idempotent; safe to re-run after a content edit.
+1. `supabase/migrations/0001_legacy_progress_rename.sql` — moves a pre-existing hand-made `user_module_progress` table aside to `user_module_progress_legacy`, indexes included. No-op on a project that never had one, so run it either way.
+2. `supabase/migrations/0002_learning_modules.sql` — adds `learning_modules`, `module_attempts`, `user_module_progress`, the `learner_signal_profile` view and two helper functions. Additive: it does not touch `scenarios`, `attempts`, or `taught_sessions`, so the Daily Challenge tab keeps working.
+3. `supabase/seed_modules.sql` — inserts the 10 modules. Idempotent; safe to re-run after a content edit.
+4. `supabase/migrations/0003_mentoring.sql` — adds the mentoring layer: `mentoring_sessions` (adopted in place if you already have a hand-made one), `mentor_share_links`, `mentor_share_responses`, the `mentorable_modules` view, and the four functions behind the public share flow.
+
+Skipping step 1 on a project that has the legacy table makes step 2 fail with
+`column p.status does not exist`, raised while creating `mentor_eligible_count` —
+Postgres validates SQL function bodies at creation time, and the legacy table has
+no `status` column. The editor runs the batch in a transaction, so the failure
+rolls back cleanly; it is a hard stop, not a partial migration.
 
 Sanity check afterwards — should return zero rows:
 
@@ -86,7 +94,28 @@ Sanity check afterwards — should return zero rows:
 select * from public.validate_module_sequence();
 ```
 
-> Unlike the tables above, **leave RLS enabled on `module_attempts`**. It stores learners' written reasoning, which can disclose personal circumstances.
+And should return 10:
+
+```sql
+select count(*) from public.learning_modules where is_published;
+```
+
+> Unlike the tables above, **leave RLS enabled on `module_attempts`**. It stores learners' written reasoning, which can disclose personal circumstances. The same goes for `mentor_share_responses`, which holds writing by people who are not users of this app at all.
+
+## 🤝 Mentoring
+
+Mentoring is scoped to a single module: **finish a module and you can mentor that module**, immediately, without finishing the other nine. The unlock signal is `user_module_progress.status = 'completed'`, which `/api/modules/grade` already writes. A penalty-free skip of Module 08 counts toward mentor eligibility but does **not** let you teach that module — you cannot explain what you chose not to see.
+
+This replaced a gate on `user_module_progress.completed_lessons >= 5`, a column that existed in no migration and counted "lessons" the finalized module system does not have.
+
+Two ways to mentor, both in the Mentor Hub:
+
+- **Share a link.** Pick a module you've completed and generate `/teach/<token>`. Anyone can open it without an account, judge the situation, and say why. Their answer lands in your Pending Reviews and you reply personally.
+- **Log an in-person session.** Unchanged, and now optionally attached to a module. Sessions logged before this have free-text topics and no module; that stays valid.
+
+The share page never receives the verdict, signals, rubric, reveal, or `canonical_reasoning` — only the prompt. The recipient is being asked to judge, so the answer is not sent to their browser, and the reply they get is a person's rather than a machine's.
+
+Anonymous recipients get **no table access at all**. The whole public surface is four security-definer functions (`get_share_link`, `submit_share_response`, `get_share_response`, plus the mentor-side `create_share_link`). A `select` policy over `mentor_share_links` would have let anyone page through every mentor's links, since PostgREST filters come from the caller — the token would stop being what grants access.
 
 ### Editing module content
 
@@ -107,6 +136,12 @@ npm run test:modules
 ```
 
 Runs the schema, migration, and seed against PGlite (Postgres compiled to WASM) and unit-tests the grading rubric. No Docker, no Supabase CLI, no network, no credentials.
+
+```bash
+npm run test:mentoring
+```
+
+Same harness, for the mentoring layer: that adopting a hand-made `mentoring_sessions` keeps its rows, that sharing is refused unless the module is completed, and that the public functions never return the answer.
 
 ### Dev preview
 
