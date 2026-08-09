@@ -1,183 +1,281 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+// src/app/api/feedback/route.ts
+//
+// Grades one Daily Challenge attempt and records it.
+//
+// Auth: the caller's access token builds the Supabase client and the learner is
+// read from that token. This replaces a `userId` taken from the request body,
+// which was unauthenticated — combined with the route's preference for
+// SUPABASE_SERVICE_ROLE_KEY (which bypasses RLS), any caller could have written
+// attempts and awarded points as any user by changing one JSON field. Same
+// pattern as /api/modules/grade now: no service-role key, RLS enforces
+// ownership.
+//
+// The scenario's verdict is read from the database, not from the request. It
+// used to arrive in `scenarioContext` from the client, which both told the
+// browser the answer before the learner submitted and let the grader be fed a
+// verdict of the caller's choosing.
 
-// Initialize Supabase Client
-// Using the service role key is recommended for backend operations to bypass RLS for inserting and updating points securely.
-// If the service role key is not available, we fall back to the anon key.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import OpenAI from "openai";
 
-// Initialize OpenAI Client (via Groq), lazily.
-// Constructing this at module scope breaks `next build`: the SDK throws
-// "Missing credentials" on an empty key, and Next evaluates route modules
-// during page-data collection, so a machine without a key can't build at all.
+export const dynamic = "force-dynamic";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+const AI_TIMEOUT_MS = 15_000;
+
 function getOpenAI(): OpenAI | null {
   const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
-  return new OpenAI({ apiKey, baseURL: 'https://api.groq.com/openai/v1' });
+  return new OpenAI({ apiKey, baseURL: "https://api.groq.com/openai/v1" });
 }
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { userId, scenarioId, userReasoning, scenarioContext, sourceUrl, noSourceFound } = body;
+    const {
+      scenarioId,
+      assessment,
+      userReasoning,
+      sourceUrl,
+      noSourceFound,
+    } = body as {
+      scenarioId?: string;
+      assessment?: "real" | "fake" | "evidence";
+      userReasoning?: string;
+      sourceUrl?: string;
+      noSourceFound?: boolean;
+    };
 
-    // 1. Input Payload Validation
-    if (!userId || typeof userId !== 'string') {
-      return NextResponse.json({ error: 'Missing or invalid userId' }, { status: 400 });
+    // ---- Auth ------------------------------------------------------------
+    const authHeader = req.headers.get("authorization") || "";
+    const accessToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Missing Authorization bearer token" },
+        { status: 401 }
+      );
     }
-    if (!scenarioId || typeof scenarioId !== 'string') {
-      return NextResponse.json({ error: 'Missing or invalid scenarioId' }, { status: 400 });
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser(accessToken);
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
-    if (!userReasoning || typeof userReasoning !== 'string' || userReasoning.trim().length < 15) {
-      return NextResponse.json({ error: 'userReasoning must be at least 15 characters long' }, { status: 400 });
+
+    // ---- Validation ------------------------------------------------------
+    if (!scenarioId || !UUID_RE.test(scenarioId)) {
+      return NextResponse.json(
+        { error: "scenarioId must be the uuid of a stored scenario" },
+        { status: 400 }
+      );
+    }
+    if (!assessment || !["real", "fake", "evidence"].includes(assessment)) {
+      return NextResponse.json(
+        { error: "assessment must be real, fake or evidence" },
+        { status: 400 }
+      );
+    }
+    if (
+      !userReasoning ||
+      typeof userReasoning !== "string" ||
+      userReasoning.trim().length < 15
+    ) {
+      return NextResponse.json(
+        { error: "userReasoning must be at least 15 characters long" },
+        { status: 400 }
+      );
     }
     if (!noSourceFound) {
-      if (!sourceUrl || typeof sourceUrl !== 'string' || (!sourceUrl.startsWith('http://') && !sourceUrl.startsWith('https://'))) {
-        return NextResponse.json({ error: 'sourceUrl must be a valid http or https URL' }, { status: 400 });
+      if (
+        !sourceUrl ||
+        typeof sourceUrl !== "string" ||
+        !/^https?:\/\//i.test(sourceUrl)
+      ) {
+        return NextResponse.json(
+          { error: "sourceUrl must be a valid http or https URL" },
+          { status: 400 }
+        );
       }
     }
-    if (!scenarioContext || typeof scenarioContext !== 'object') {
-      return NextResponse.json({ error: 'Missing or invalid scenarioContext' }, { status: 400 });
+
+    // ---- Load the scenario (the verdict comes from here, not the client) --
+    const { data: scenario, error: scenarioError } = await supabase
+      .from("scenarios")
+      .select("id, title, body_context, category, verdict, origin")
+      .eq("id", scenarioId)
+      .single();
+
+    if (scenarioError || !scenario) {
+      return NextResponse.json(
+        { error: "That scenario does not exist" },
+        { status: 404 }
+      );
     }
 
-    // 2. LLM System Prompt & JSON Formatting
+    // ---- Grade -----------------------------------------------------------
     const systemPrompt = `
 You are an encouraging, expert Media Literacy AI Coach.
-Your task is to evaluate the user's typed reasoning and their verification source against the correct verdict and the provided grading rubric.
+Evaluate the user's typed reasoning and their verification source against the correct verdict.
 
 Grading Rubric:
-1. Evaluate Reasoning (50% of score): Check analytical depth and identification of red flags in their reasoning.
-2. Audit Source Credibility (50% of score): Check the provided verification source URL.
+1. Evaluate Reasoning (50% of score): analytical depth and identification of red flags.
+2. Audit Source Credibility (50% of score): the provided verification source.
 
-RULE 1 — GIBBERISH / RANDOM TEXT DETECTION: If userReasoning is random keyboard mashing, irrelevant filler text, or under 15 words of genuine analysis, assign a score between 5 and 15. Set verdictTitle to "Invalid Analysis — Gibberish Detected" and explicitly state in personalizedFeedback: "Your submission appears to be random text rather than a critical media literacy analysis. To evaluate a claim, you must explain specific red flags..."
+RULE 1 — GIBBERISH DETECTION: If userReasoning is random keyboard mashing, irrelevant filler, or under 15 words of genuine analysis, assign a score between 5 and 15, set verdictTitle to "Invalid Analysis — Gibberish Detected" and say so plainly in personalizedFeedback.
 
-RULE 2 — SOURCE CREDIBILITY & FAKE LINK AUDIT: Check the sourceUrl string:
-- If it is empty, random characters, a broken link, or a non-existent domain, set sourceAudit to: "FAILED AUDIT: The provided link is not a recognized or valid verification source. Always cite reputable registries like Snopes, Reuters, or official institutional domains."
-- If it is a valid government (.gov), academic (.edu), or IFCN fact-checker domain (Reuters, Snopes, PolitiFact, BBC, AltNews, BoomLive), commend it explicitly.
-- If it is a social media link, unverified blog, or tabloid, deduct points and explicitly warn the user about domain bias and secondary-source unreliability.
+RULE 2 — SOURCE AUDIT:
+- Empty, random, broken, or non-existent domain → "FAILED AUDIT: The provided link is not a recognized verification source. Cite reputable registries like Snopes, Reuters, or official institutional domains."
+- Valid government (.gov), academic (.edu), or IFCN fact-checker domain (Reuters, Snopes, PolitiFact, BBC, AltNews, BoomLive) → commend it explicitly.
+- Social media, unverified blog, or tabloid → deduct points and warn about secondary-source unreliability.
 
-SPECIAL CASE: Absence of Official Source (noSourceFound: true):
-If the user checked noSourceFound: true, they are asserting that this claim is a scam/fake because no official press release or notification exists on primary channels.
-AI Evaluation Rule:
-Verify Logical Channel: Did the user check the right official portal for this specific topic? (e.g., Checking education.gov.in for a laptop scheme, or rbi.org.in for a banking alert).
-- If the user checked a relevant official domain: Highly commend them in sourceAudit! Response format: "EXCELLENT LATERAL READING: You correctly checked primary official channels ([Domain Name]) and identified that no such scheme or press release exists. Proving the absence of official confirmation is a key defense against WhatsApp forwards."
-- If the user typed a non-relevant domain or left it vague: Coach them nicely in sourceAudit: "You correctly recognized that this scheme lacks official backing. However, to be thorough, specify which official portal you checked (for instance, the official Ministry of Education domain at education.gov.in) to confirm there was no notification."
+SPECIAL CASE — noSourceFound: true: the user asserts the claim is fake because no official announcement exists.
+- Checked a relevant official domain → commend: "EXCELLENT LATERAL READING: You checked primary official channels ([Domain]) and identified that no such scheme or press release exists."
+- Vague or irrelevant domain → coach them to name the specific portal.
 
-Rule 3: Focus on the quality of reasoning and the credibility of the source. Be encouraging unless gibberish is detected.
-Rule 4: You MUST explicitly quote or reference at least one phrase the user typed in their reasoning (unless it is gibberish).
-Rule 5: You MUST explicitly mention the source URL they provided in your source audit.
+RULE 3 — "needs more evidence" (assessment: evidence) is a legitimate answer, not a wrong one. Do not penalise withholding judgment; coach them on what evidence would settle it.
+RULE 4: Quote or reference at least one phrase the user typed (unless gibberish).
+RULE 5: Explicitly mention the source they provided in the source audit.
 
-Expected JSON Output Schema:
+Return JSON:
 {
-  "score": <Integer between 0 and 100>,
-  "verdictTitle": "<Concise summary badge, e.g., Strong Analysis — Credible Source Cited>",
-  "personalizedFeedback": "<Coaching text referencing user words>",
-  "sourceAudit": "<Specific feedback on the source URL provided, e.g. VERIFIED CREDIBLE: The domain cited is an IFCN-certified signatory.>",
-  "keyLesson": "<Actionable MIL takeaway>"
+  "score": <integer 0-100>,
+  "verdictTitle": "<short badge>",
+  "personalizedFeedback": "<coaching text referencing user words>",
+  "sourceAudit": "<specific feedback on the source>",
+  "keyLesson": "<actionable MIL takeaway>"
 }
 `;
 
     const userMessage = `
 Scenario Context:
-Title: ${scenarioContext.title || 'Unknown'}
-Verdict: ${scenarioContext.verdict || 'Unknown'}
+Title: ${scenario.title}
+Correct verdict: ${scenario.verdict}
 
-User's Verification Source URL:
-"${sourceUrl}"
-noSourceFound Checked: ${noSourceFound}
+User's assessment: ${assessment}
+User's Verification Source URL: "${sourceUrl ?? ""}"
+noSourceFound Checked: ${!!noSourceFound}
 
 User's Reasoning:
 "${userReasoning}"
 `;
 
-    let result;
+    let result: any;
+    let gradedBy: "ai" | "fallback" = "ai";
+
     try {
       const openai = getOpenAI();
-      if (!openai) throw new Error('No AI API key configured');
+      if (!openai) throw new Error("No AI API key configured");
 
-      // Include a safety timeout to prevent hanging the request
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('OpenAI Request Timeout')), 15000)
+        setTimeout(() => reject(new Error("AI request timeout")), AI_TIMEOUT_MS)
       );
 
-      const aiResponsePromise = openai.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
-      });
+      const completion = (await Promise.race([
+        openai.chat.completions.create({
+          model: "llama-3.3-70b-versatile",
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage },
+          ],
+        }),
+        timeoutPromise,
+      ])) as OpenAI.Chat.Completions.ChatCompletion;
 
-      const completion = await Promise.race([aiResponsePromise, timeoutPromise]) as OpenAI.Chat.Completions.ChatCompletion;
-      
-      const content = completion.choices[0]?.message?.content || '{}';
-      result = JSON.parse(content);
-      
-      // Ensure expected fields exist
-      if (typeof result.score !== 'number') result.score = 50;
+      result = JSON.parse(completion.choices[0]?.message?.content || "{}");
+
+      if (typeof result.score !== "number") result.score = 50;
+      result.score = Math.max(0, Math.min(100, Math.round(result.score)));
       if (!result.verdictTitle) result.verdictTitle = "Analysis Completed";
-      if (!result.personalizedFeedback) result.personalizedFeedback = "Good effort on analyzing this scenario.";
+      if (!result.personalizedFeedback)
+        result.personalizedFeedback = "Good effort analyzing this scenario.";
       if (!result.sourceAudit) result.sourceAudit = "Source evaluation completed.";
-      if (!result.keyLesson) result.keyLesson = "Pro Tip: Always verify sources.";
-
+      if (!result.keyLesson) result.keyLesson = "Always verify the primary source.";
     } catch (aiError) {
-      console.error("❌ [/api/feedback] AI EVALUATION FAILED:", aiError);
-      // Graceful fallback JSON response so UI never crashes
+      console.error("[/api/feedback] AI evaluation failed:", aiError);
+      gradedBy = "fallback";
       result = {
         score: 50,
-        verdictTitle: "Analysis Completed — Keep Practicing",
-        personalizedFeedback: "You made a solid attempt at reasoning through this scenario. Let's keep refining your media literacy skills.",
-        sourceAudit: "UNVERIFIED: We couldn't automatically verify your source this time.",
-        keyLesson: "Pro Tip: Always double-check the original source of any sensational claim."
+        verdictTitle: "Analysis Recorded — Coach Unavailable",
+        personalizedFeedback:
+          "Your reasoning was recorded, but the AI coach could not be reached this time, so this score is a placeholder rather than a judgment of your answer.",
+        sourceAudit:
+          "UNVERIFIED: your source could not be audited automatically this time.",
+        keyLesson:
+          "Always double-check the original source of any sensational claim.",
       };
     }
 
-    // 3. Supabase Database Logging
-    // Insert record into attempts table
-    const { error: insertError } = await supabase
-      .from('attempts')
-      .insert({
-        user_id: userId,
-        scenario_id: scenarioId,
-        user_reasoning: userReasoning,
-        ai_score: result.score,
-        // Note: If 'ai_feedback' is added to the schema later, you can uncomment the line below.
-        // ai_feedback: result.personalizedFeedback
-      });
+    // ---- Persist ---------------------------------------------------------
+    const { error: insertError } = await supabase.from("attempts").insert({
+      user_id: user.id,
+      scenario_id: scenario.id,
+      user_reasoning: userReasoning,
+      ai_score: result.score,
+      assessment,
+      source_url: sourceUrl || null,
+      no_source_found: !!noSourceFound,
+      ai_feedback: result.personalizedFeedback,
+      source_audit: result.sourceAudit,
+      verdict_title: result.verdictTitle,
+      key_lesson: result.keyLesson,
+      graded_by: gradedBy,
+    });
 
     if (insertError) {
-      console.error('Supabase Insert Error:', insertError);
-      // We log the error but still return the AI response so the user isn't blocked
+      // Log it but still return the grade — a storage problem must not cost the
+      // learner their feedback. Unlike before, this is now genuinely unexpected
+      // rather than the guaranteed outcome of a hardcoded user id.
+      console.error("[/api/feedback] attempt insert failed:", insertError);
     }
 
-    // Increment user's total_points in profiles table
-    // (A fetch and update approach. In a strict prod environment, an RPC function is preferred to prevent race conditions)
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('total_points')
-      .eq('id', userId)
+    // Points. Read-modify-write, as before — a race here costs a few points on
+    // concurrent submissions, which is not worth an RPC at this stage.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("total_points")
+      .eq("id", user.id)
       .single();
 
-    if (profile && !profileError) {
-      const newPoints = (profile.total_points || 0) + result.score;
+    if (profile) {
       await supabase
-        .from('profiles')
-        .update({ total_points: newPoints })
-        .eq('id', userId);
+        .from("profiles")
+        .update({ total_points: (profile.total_points || 0) + result.score })
+        .eq("id", user.id);
     }
 
-    // Return successful payload
-    return NextResponse.json(result, { status: 200 });
+    const { data: streak } = await supabase.rpc("user_challenge_streak", {
+      p_user_id: user.id,
+    });
 
-  } catch (error: any) {
-    console.error('Feedback API Route Error:', error);
+    // The verdict is released now, and only now: the learner has answered.
     return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
+      {
+        ...result,
+        gradedBy,
+        actualVerdict: scenario.verdict,
+        wasCorrect: assessment === scenario.verdict,
+        streak: typeof streak === "number" ? streak : null,
+        persisted: !insertError,
+      },
+      { status: 200 }
     );
+  } catch (error: any) {
+    console.error("[/api/feedback] route error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

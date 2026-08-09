@@ -81,6 +81,7 @@ Run these three files in the Supabase SQL editor, in order. **The Learn tab will
 2. `supabase/migrations/0002_learning_modules.sql` — adds `learning_modules`, `module_attempts`, `user_module_progress`, the `learner_signal_profile` view and two helper functions. Additive: it does not touch `scenarios`, `attempts`, or `taught_sessions`, so the Daily Challenge tab keeps working.
 3. `supabase/seed_modules.sql` — inserts the 10 modules. Idempotent; safe to re-run after a content edit.
 4. `supabase/migrations/0003_mentoring.sql` — adds the mentoring layer: `mentoring_sessions` (adopted in place if you already have a hand-made one), `mentor_share_links`, `mentor_share_responses`, the `mentorable_modules` view, and the four functions behind the public share flow.
+5. `supabase/migrations/0004_challenge.sql` — extends `scenarios` and `attempts` so the Daily Challenge can actually record something, and adds the Questions Bank, the `challenge_feed` and `scenario_stats` views, and the streak function.
 
 Skipping step 1 on a project that has the legacy table makes step 2 fail with
 `column p.status does not exist`, raised while creating `mentor_eligible_count` —
@@ -117,6 +118,23 @@ The share page never receives the verdict, signals, rubric, reveal, or `canonica
 
 Anonymous recipients get **no table access at all**. The whole public surface is four security-definer functions (`get_share_link`, `submit_share_response`, `get_share_response`, plus the mentor-side `create_share_link`). A `select` policy over `mentor_share_links` would have let anyone page through every mentor's links, since PostgREST filters come from the caller — the token would stop being what grants access.
 
+## 🎯 Daily Challenge & Questions Bank
+
+The Challenge tab shipped without ever recording anything. It POSTed a hardcoded `userId: "demo-user-123"` — not a uuid, so every insert into `attempts` failed its foreign key to `profiles` — and AI-generated scenarios were given in-memory ids like `ai-live-1723-457` and never written to `scenarios`, so even a correct user id could not have satisfied `attempts.scenario_id`. Both errors were logged and swallowed. On the hosted project: **8 scenarios, 0 attempts, ever.** The Profile tab computes level, points and category breakdown from that table.
+
+What changed:
+
+- The screen is behind `ProtectedRoute` like the rest of the dashboard, and the learner comes from the session.
+- `/api/challenge/next` returns a scenario that **exists as a row** — generated ones are persisted first (`origin = 'ai_generated'`) and the real uuid is returned.
+- `/api/feedback` authenticates from the bearer token and no longer accepts a `userId` from the body. It previously preferred `SUPABASE_SERVICE_ROLE_KEY`, which bypasses RLS, so any caller could write attempts and award points as any user by editing one JSON field. The scenario's verdict is now read from the database rather than taken from the request.
+- The verdict is not in the payload that renders the card. It comes back with the grade, once the learner has answered.
+- If an attempt still fails to save, the result card says so. Silently discarded attempts are exactly what went wrong before.
+- Streak (`user_challenge_streak`), and `scenario_stats` for "% of learners spotted it".
+
+**Questions Bank.** Learners write and tag their own situations, which join the shared pool — "no AI checks it; your judgment is the check", per the prototype. Submitting requires **at least one completed module**, the same bar that unlocks mentoring: someone who has finished a module has been graded on their reasoning at least once.
+
+> `attempts` carries a **public read** policy from `schema.sql`, so `user_reasoning` on the Challenge is world-readable. That is the opposite of `module_attempts` and `mentor_share_responses`, which are private precisely because written reasoning can disclose personal circumstances. This is a pre-existing decision that 0004 does not change underneath the tab, but it is worth a deliberate call before any real deployment.
+
 ### Editing module content
 
 Modules are authored as typed TypeScript in `src/content/modules/`, one file per module. The `.sql` seed is generated from them:
@@ -142,6 +160,12 @@ npm run test:mentoring
 ```
 
 Same harness, for the mentoring layer: that adopting a hand-made `mentoring_sessions` keeps its rows, that sharing is refused unless the module is completed, and that the public functions never return the answer.
+
+```bash
+npm run test:challenge
+```
+
+Same harness again, for the Daily Challenge. Includes explicit regression cases reproducing both persistence bugs — the non-uuid user id and the unsaved scenario id — so neither can come back quietly.
 
 ### Dev preview
 
