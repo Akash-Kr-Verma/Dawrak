@@ -34,8 +34,16 @@ export type ModuleProgressStatus =
   | "skipped";
 
 /**
- * 'accurate' | 'misleading' exist for Module 07, where every fact is true and
- * "real or fake" would mark good reasoning wrong. See `question_variant`.
+ * Every module now asks the same question and offers the same two buttons:
+ * REAL or FAKE. Module 07 used to ask "accurate picture / misleading" because
+ * every fact in it is true — that split the interaction pattern across the set
+ * and made the judgement feel like a different exercise each time. The nuance
+ * it existed to protect now lives where it belongs: in the explanation, which
+ * says outright that the numbers weren't fabricated and the framing is what
+ * makes the post fake.
+ *
+ * 'accurate' | 'misleading' remain in the union ONLY so attempts recorded
+ * before that change still parse. Nothing emits them.
  */
 export type LearnerVerdict = "real" | "fake" | "accurate" | "misleading";
 
@@ -56,10 +64,31 @@ export interface ModuleSignal {
   id: string;
   /** Human-readable statement of the signal, shown in feedback and reveal. */
   signal: string;
-  /** 1-3. Feedback names the highest-weight signal the learner missed. */
+  /**
+   * 1-3. Weight is also the strong/supporting line: a 3 settles the question on
+   * its own or close to it, a 1-2 is real evidence that isn't enough by itself.
+   * Feedback says so explicitly rather than praising every hit equally.
+   */
   weight: 1 | 2 | 3;
   polarity: SignalPolarity;
   tier?: SignalTier;
+  /**
+   * One short line for the "Other signals" list. `signal` is written for an
+   * author reading a rubric; `short` is written for a learner who has just
+   * finished the scenario and will read four bullets, not four paragraphs.
+   */
+  short?: string;
+  /**
+   * Phrases that indicate the learner expressed THIS idea, in their own words.
+   * Used by the deterministic matcher, which is the path that runs whenever
+   * there is no AI key configured — so these are not a nicety, they are how
+   * most learners' reasoning actually gets recognized.
+   *
+   * A cue containing a space is matched as a phrase. A single word is matched
+   * on word boundaries. Write cues a learner would plausibly type, not the
+   * vocabulary of the signal statement.
+   */
+  cues?: string[];
   /** Author's note on why this signal matters. Not shown to learners. */
   note?: string;
 }
@@ -78,6 +107,40 @@ export interface RubricClause {
   anyOf?: string[];
   min?: number;
   andNot?: string[];
+}
+
+/**
+ * The authored half of the post-answer feedback.
+ *
+ * It lives on the rubric rather than in its own column for one practical
+ * reason: `rubric` is already jsonb, already server-side-only, and already the
+ * place that says how this module responds to a learner (see
+ * `feedbackConstraints`). Putting it here means no migration is needed to ship
+ * the new feedback shape — the seed regenerates the column.
+ *
+ * The learner-facing sequence is assembled at grade time as:
+ *   What you noticed  — composed, personal, from their words and their actions
+ *   Strongest clue    — `strongest`, authored, the same every time on purpose
+ *   Other signals     — picked from signals[].short
+ *   Takeaway          — `takeaway`, authored, one line they can carry out
+ */
+export interface FeedbackFrame {
+  /** The one piece of evidence that settles this module. Two or three lines. */
+  strongest: string;
+  /** One memorable principle that outlives this scenario. One line. */
+  takeaway: string;
+  /**
+   * Appended to "What you noticed" when the learner's verdict was wrong.
+   * Module-specific because the useful thing to say differs: over-flagging a
+   * genuine listing and missing a scam are opposite mistakes.
+   */
+  wrongVerdictNote?: string;
+  /**
+   * Appended when the verdict was right. Module 07 uses it to state outright
+   * that the numbers were not fabricated, which the REAL/FAKE buttons can't
+   * say on their own.
+   */
+  correctVerdictNote?: string;
 }
 
 export interface ModuleRubric {
@@ -103,6 +166,8 @@ export interface ModuleRubric {
   rejectOnDistractor?: boolean;
   /** Tone/handling requirements injected into the grader prompt. */
   feedbackConstraints?: string[];
+  /** The authored half of the four-part feedback. See FeedbackFrame. */
+  feedback?: FeedbackFrame;
   /** Author's note. Not sent to the model. */
   notes?: string;
 }
@@ -116,6 +181,8 @@ export interface ModuleDistractor {
   claim: string;
   /** Why it is wrong, and how to correct it kindly. */
   correction: string;
+  /** Phrases that indicate the learner leaned on this. Same rules as signal cues. */
+  cues?: string[];
   /**
    * Attempt-level boolean to set if the learner's reasoning rests on this.
    * Currently only Module 10's "I'd test it with a small amount first".
@@ -385,6 +452,26 @@ export interface UserModuleProgress {
   updated_at: string;
 }
 
+/**
+ * The four-part learning sequence shown after judging, in display order.
+ *
+ * Only `noticed` is personal — it is built from what this learner wrote, what
+ * they did, and what they walked past. The other three are the module's
+ * teaching, reorganized so it can be read rather than skipped.
+ */
+export interface FeedbackBlocks {
+  /** Personalized. Never a stock sentence when there is real input to respond to. */
+  noticed: string;
+  /** The single most important piece of evidence in this scenario. */
+  strongest: string;
+  /** 2-4 short supporting evidence points. */
+  others: string[];
+  /** One principle that applies outside the module. */
+  takeaway: string;
+  /** Corrections for wrong-but-tempting reasons the learner actually leaned on. */
+  corrections: string[];
+}
+
 /** Shape returned by the grading endpoint. */
 export interface GradeResult {
   score: ModuleGrade;
@@ -392,6 +479,8 @@ export interface GradeResult {
   advanced_reasoner: boolean;
   over_flagged: boolean;
   dangerous_reasoning: boolean;
+  /** Flattened `blocks.noticed`. Kept for the module_attempts.feedback column. */
   feedback: string;
+  blocks: FeedbackBlocks;
   graded_by: "ai" | "deterministic" | "action_only";
 }

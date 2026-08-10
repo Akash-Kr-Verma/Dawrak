@@ -99,6 +99,22 @@ export const m01: AuthoredModule = {
       weight: 3,
       polarity: "red_flag",
       tier: "primary",
+      short:
+        "It asks for your PIN and a one-time code through a link. An OTP exists to confirm something you started, inside the official app — anyone asking you to type one elsewhere is asking for the thing that defeats your bank's security.",
+      cues: [
+        "pin",
+        "otp",
+        "one time code",
+        "one time password",
+        "code",
+        "password",
+        "never ask",
+        "would never ask",
+        "asking for my details",
+        "asks for my pin",
+        "security details",
+        "credentials",
+      ],
     },
     {
       id: "S2",
@@ -106,6 +122,22 @@ export const m01: AuthoredModule = {
       weight: 2,
       polarity: "red_flag",
       tier: "primary",
+      short:
+        "A 24-hour deadline. Urgency isn't information — it's there to stop you pausing, opening the app yourself, or asking someone you trust.",
+      cues: [
+        "24 hours",
+        "deadline",
+        "urgency",
+        "urgent",
+        "hurry",
+        "rush",
+        "pressure",
+        "time limit",
+        "act fast",
+        "immediately",
+        "threatens to close",
+        "suspend",
+      ],
     },
     {
       id: "S3",
@@ -113,6 +145,18 @@ export const m01: AuthoredModule = {
       weight: 2,
       polarity: "red_flag",
       tier: "primary",
+      short:
+        "The link is shortened, so you can't see where it actually goes until you're already there.",
+      cues: [
+        "shortened link",
+        "short link",
+        "shortened url",
+        "cant see where",
+        "hides the",
+        "dont know where the link",
+        "bitly",
+        "the link is",
+      ],
     },
     {
       id: "S4",
@@ -120,6 +164,22 @@ export const m01: AuthoredModule = {
       weight: 3,
       polarity: "red_flag",
       tier: "advanced",
+      short:
+        "The address is a lookalike, one character off the real one — exactly the difference your eye smooths over on a small screen.",
+      cues: [
+        "domain",
+        "url",
+        "web address",
+        "address bar",
+        "not the real site",
+        "lookalike",
+        "spelled",
+        "spelling of the address",
+        "different website",
+        "wrong website",
+        "fake site",
+        "verify in the address",
+      ],
     },
     {
       id: "S5",
@@ -129,6 +189,20 @@ export const m01: AuthoredModule = {
       polarity: "red_flag",
       tier: "advanced",
       note: "The one that does real work. Learners are taught 'generic greeting = scam', which means a personalized scam sails straight past them. This inverts that instinct on purpose.",
+      short:
+        "It uses your real first name. That points at a leaked list, not at legitimacy — names are bought in bulk, and a personalized scam walks straight past anyone taught that “generic greeting” is the tell.",
+      cues: [
+        "my name",
+        "uses my name",
+        "knows my name",
+        "personalised",
+        "personalized",
+        "data leak",
+        "leaked",
+        "breach",
+        "anyone could know my name",
+        "doesnt prove",
+      ],
     },
     {
       id: "S6",
@@ -138,6 +212,17 @@ export const m01: AuthoredModule = {
       polarity: "red_flag",
       tier: "expert",
       note: "Bonus signal. Award it, don't require it.",
+      short:
+        "The padlock proves the connection is encrypted. It says nothing about who is on the other end, and it's free to get.",
+      cues: [
+        "padlock",
+        "https",
+        "lock icon",
+        "secure connection",
+        "ssl",
+        "certificate",
+        "encryption",
+      ],
     },
   ],
 
@@ -159,27 +244,66 @@ The check that always works: don't follow the link. Open the official app yourse
     feedbackConstraints: [
       "When PARTIAL: name the signals they did get, then introduce exactly one they missed, highest weight first. Never list all of them — that's a lecture, not feedback.",
     ],
+    feedback: {
+      strongest:
+        "It asks for your PIN and a one-time code through a link. No legitimate provider ever does that. A one-time code exists to confirm an action you started, inside the official app — so anyone asking you to type one somewhere else is asking for precisely the thing that defeats your bank's security.",
+      takeaway:
+        "Don't follow the link. Open the official app yourself, or type the address you already know. If something is genuinely wrong with your account, it will be waiting for you there.",
+      wrongVerdictNote:
+        "This one is written to survive the checks people are usually taught — it's spelled correctly, it uses your real name, and the page has a padlock. Those are the reasons it works, not reasons it's genuine.",
+    },
   },
 
   distractors: [
     {
       claim: "It has bad spelling/grammar",
       correction:
-        "It doesn't. Modern phishing is clean. Teaching spelling as the tell makes learners more vulnerable to polished attacks.",
+        "It doesn't — read it again, the message is clean. This is worth unlearning: modern phishing is well written, and “bad English” as a tell leaves you defenceless against the polished ones.",
+      cues: [
+        "spelling",
+        "grammar",
+        "badly written",
+        "bad english",
+        "typos",
+        "mistakes in the",
+        "poorly written",
+      ],
     },
     {
       claim: "It came from an unknown number",
       correction:
-        "It displays a brand name, not a number. That's the deception, not a tell.",
+        "It doesn't display a number at all — it displays a brand name. Sender names like that are trivially spoofable, which is the deception rather than the tell.",
+      cues: [
+        "unknown number",
+        "random number",
+        "strange number",
+        "number i dont know",
+        "didnt recognise the number",
+      ],
     },
     {
       claim: "There's no padlock so it's not secure",
       correction:
-        "There is a padlock. If a learner says this they've misread the screen; correct it gently.",
+        "There is a padlock on that page. Worth knowing why it doesn't help: it proves the connection is encrypted, not who is at the other end, and anyone can get one for free.",
+      cues: [
+        "no padlock",
+        "not secure",
+        "no lock",
+        "no https",
+        "missing padlock",
+      ],
     },
     {
       claim: "Real companies don't send SMS",
-      correction: "They do, constantly. Wrong lesson.",
+      correction:
+        "They do, constantly — banks, wallets and delivery services all message customers. A rule that says otherwise will have you ignoring real messages and won't catch this one.",
+      cues: [
+        "companies dont send",
+        "banks dont text",
+        "wouldnt send an sms",
+        "dont send messages",
+        "never text you",
+      ],
     },
   ],
 

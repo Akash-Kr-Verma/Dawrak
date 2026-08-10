@@ -59,28 +59,28 @@ Not everything online is a scam — and calling something fake when it isn't has
   assets: [
     {
       slot: "photo_1",
-      what: "Whole bike, side-on, outdoors",
-      source: "Unsplash / Pexels — `used bicycle side view`",
-      license: "Unsplash License / Pexels License — free commercial, no attribution required",
+      what: "Whole bike, side-on, leaning against a wall outdoors",
+      source: "src/components/modules/BikePhotos.tsx — drawn in-app",
+      license: "Ours",
     },
     {
       slot: "photo_2",
-      what: "Drivetrain / gears close-up",
-      source: "Unsplash / Pexels — `bicycle gears closeup`",
-      license: "Unsplash License / Pexels License",
+      what: "Front three-quarter view, taken standing over the bike",
+      source: "src/components/modules/BikePhotos.tsx — drawn in-app",
+      license: "Ours",
     },
     {
       slot: "photo_3",
-      what: "Handlebars & brakes",
-      source: "Unsplash / Pexels — `bicycle handlebars detail`",
-      license: "Unsplash License / Pexels License",
+      what: "Drivetrain close-up — chainring, chain, cassette, derailleur",
+      source: "src/components/modules/BikePhotos.tsx — drawn in-app",
+      license: "Ours",
     },
     {
       slot: "photo_4",
-      what: "A visible scuff or worn tyre",
-      source: "Unsplash / Pexels — `worn bicycle tire`",
-      license: "Unsplash License / Pexels License",
-      note: "Photo 4 is doing real work. An honest used-item listing shows the flaw; scam listings use pristine catalog images. Include the scuff.",
+      what: "Close-up of the scratch on the top tube, with the faded paint behind it",
+      source: "src/components/modules/BikePhotos.tsx — drawn in-app",
+      license: "Ours",
+      note: "Photo 4 is doing real work and is not optional. An honest used-item listing shows the flaw; scam listings use pristine catalog images. The description points the buyer at THIS photo, so the scratch has to actually be visible in it — a placeholder here turns the module's strongest green flag into something the learner has to take on trust.",
     },
     {
       slot: "avatar_seller",
@@ -117,12 +117,20 @@ ask "last price" — come see it.`,
     footer: "Meet in a public place. Check the item before you pay.",
     // Photos must look shot by the same person, same phone, same session.
     // Mismatched lighting or four different bikes is exactly the signal we're
-    // teaching learners to detect — we'd be accidentally building a fake.
+    // teaching learners to detect — we'd be accidentally building a fake. This
+    // is why they are drawn rather than sourced: no stock library has four
+    // photos of one used bike with the scratch the description names.
     photo_consistency_note:
-      "Filter by one photographer's set. Consistent lighting and background are mandatory.",
+      "One bike, one lighting setup, one session, across all four frames. See BikePhotos.tsx.",
   },
 
   // Green flags — same field, positive polarity.
+  //
+  // Weight is doing real work in this module. G1-G3 are the three that settle
+  // it; G4-G7 are true, useful, and not enough on their own. A learner who
+  // calls this real because the account is old has made a correct call for a
+  // weak reason, and the feedback has to be able to say so — otherwise the
+  // lesson they take away is "trust old accounts", which is the next scam.
   signals: [
     {
       id: "G1",
@@ -130,6 +138,25 @@ ask "last price" — come see it.`,
         "Discloses a flaw and points to the photo of it — scammers don't advertise defects",
       weight: 3,
       polarity: "green_flag",
+      short:
+        "The seller volunteers a flaw — a scratch on the top tube — and tells you which photo shows it. Nobody advertises a defect on an item they don't actually have.",
+      cues: [
+        "scratch",
+        "mentions the damage",
+        "shows the damage",
+        "discloses",
+        "admits",
+        "points to the photo",
+        "honest about",
+        "upfront about",
+        "tells you what is wrong",
+        "faded paint",
+        "faded",
+        "doesnt hide",
+        "does not hide",
+        "shows the flaw",
+        "mentions the fault",
+      ],
     },
     {
       id: "G2",
@@ -137,12 +164,50 @@ ask "last price" — come see it.`,
         "Pickup only, pay in person — no pressure toward transfer or deposit",
       weight: 3,
       polarity: "green_flag",
+      short:
+        "Pickup only, paid in person. No transfer, no deposit — nothing that moves money before you have the bike in your hands.",
+      cues: [
+        "cash on pickup",
+        "cash when i pick",
+        "cash when i collect",
+        "pay when i pick",
+        "pay when i collect",
+        "pay on pickup",
+        "pay in person",
+        "paying in person",
+        "pickup only",
+        "pick up only",
+        "collect in person",
+        "meet in person",
+        "no deposit",
+        "no transfer",
+        "no advance payment",
+        "not asking for money upfront",
+        "no money upfront",
+      ],
     },
     {
       id: "G3",
       signal: "Invites inspection before payment — the opposite of urgency",
       weight: 3,
       polarity: "green_flag",
+      short:
+        "You're invited to try the bike before you pay. Every scam needs the money to move before you can check what you're buying.",
+      cues: [
+        "inspect",
+        "try it before",
+        "try before",
+        "test it",
+        "test ride",
+        "see it before",
+        "check it before",
+        "look at it before",
+        "come and see",
+        "come see it",
+        "welcome to come",
+        "check the bike first",
+        "see the bike first",
+      ],
     },
     {
       id: "G4",
@@ -150,12 +215,43 @@ ask "last price" — come see it.`,
         "Multi-year account with a rating history — costly to fake, cheap to check",
       weight: 2,
       polarity: "green_flag",
+      short:
+        "A years-old account with a rating history. Possible to fake, expensive to fake — most scam accounts are days old because the last ten got shut down.",
+      cues: [
+        "account is old",
+        "old account",
+        "account has been",
+        "joined",
+        "years on facebook",
+        "long time account",
+        "established account",
+        "rating",
+        "ratings",
+        "reviews",
+        "history",
+        "profile looks real",
+        "real profile",
+      ],
     },
     {
       id: "G5",
       signal: 'Price is ordinary — no "too good to be true" hook',
       weight: 2,
       polarity: "green_flag",
+      short:
+        "The price is ordinary. There's no bargain doing the persuading, which is what a too-good-to-be-true price is for.",
+      cues: [
+        "price is",
+        "priced",
+        "reasonable price",
+        "fair price",
+        "normal price",
+        "not too cheap",
+        "isnt too cheap",
+        "not too good to be true",
+        "realistic price",
+        "market price",
+      ],
     },
     {
       id: "G6",
@@ -163,12 +259,40 @@ ask "last price" — come see it.`,
         "Photos are consistent and clearly the actual item, not catalog stock",
       weight: 2,
       polarity: "green_flag",
+      short:
+        "The photos are of this bike, taken in one session, flaws included — not catalogue shots of a bike that could be anywhere.",
+      cues: [
+        "photos",
+        "photo",
+        "pictures",
+        "images",
+        "not stock",
+        "real photos",
+        "actual bike",
+        "same bike",
+        "taken on a phone",
+        "look like they were taken",
+      ],
     },
     {
       id: "G7",
       signal: 'No urgency at all — no countdown, no "3 other buyers waiting"',
       weight: 2,
       polarity: "green_flag",
+      short:
+        "No countdown, no other buyers waiting, no reason you have to decide today. Urgency is the tool that stops you checking.",
+      cues: [
+        "no urgency",
+        "not urgent",
+        "no rush",
+        "not rushing",
+        "no pressure",
+        "not pressuring",
+        "not pushing",
+        "no deadline",
+        "not forcing",
+        "takes his time",
+      ],
     },
   ],
 
@@ -183,32 +307,80 @@ And the price is just… a price. Nothing about this listing is trying to make y
 Here's the part that matters beyond this bike: being suspicious of everything is not the same as being good at spotting scams. If you flag this listing, you'd also flag every honest seller in your city. The skill is telling the difference — and the difference is *specific evidence*, not a general feeling that the internet is dangerous.`,
 
   rubric: {
-    accept: [{ anyOf: ["G1", "G2", "G3", "G4", "G5", "G6", "G7"], min: 2 }],
-    partial: [{ anyOf: ["G1", "G2", "G3", "G4", "G5", "G6", "G7"], min: 1 }],
+    // Changed from "any two green flags" to "at least one of the three that
+    // actually settle it". Under the old rule, "the account is old and the
+    // price looks normal" was full credit — two true observations, neither of
+    // which would protect anyone, and the learner was told they'd reasoned
+    // well. Weak-only reasoning is now PARTIAL, and the feedback names the
+    // stronger evidence they walked past.
+    accept: [{ anyOf: ["G1", "G2", "G3"], min: 1 }],
+    partial: [{ anyOf: ["G4", "G5", "G6", "G7"], min: 1, andNot: ["G1", "G2", "G3"] }],
     // Calling this fake is over-flagging — the exact failure mode the module
     // exists to catch. Three across the set feeds Personalized Path.
     wrongVerdict: { score: "reject", flags: ["over_flagged"] },
     feedbackConstraints: [
       "A learner who called this fake must not simply be told 'wrong'. Feedback must: (1) acknowledge that caution is a good instinct, (2) ask them to point at the specific evidence they were reacting to, (3) name the two strongest green flags they walked past, (4) state the cost of a false positive in one line.",
       "PARTIAL also applies to reasoning purely from absence ('nothing seems wrong') — push toward specific evidence.",
+      "Do not praise reasoning that rests only on account age, ratings, or price. Say plainly that it is supporting evidence and name what is stronger.",
     ],
+    feedback: {
+      strongest:
+        "You can inspect the bike before any money moves. That single fact is what makes this listing safe to believe — a scam needs payment to happen before you can check what you're buying, and a seller who says come and try it, pay me when you collect it, has given away the only advantage a scammer has.",
+      takeaway:
+        "Being suspicious of everything is not the same skill as spotting a scam. Ask yourself what specific evidence you are reacting to — if you can't name one, that's a feeling, not a finding.",
+      wrongVerdictNote:
+        "Caution is a good instinct, and this one is deliberately hard. But a false alarm costs something too: it means walking past honest sellers and treating ordinary people as criminals. Being able to say “this one is fine, and here's why” is the harder half of the skill.",
+    },
   },
 
   distractors: [
     {
       claim: "The account could be hacked / stolen",
       correction:
-        "Technically possible, but if unfalsifiable suspicion counts as reasoning, nothing is ever real. Push back on this one directly.",
+        "It could be — and there's nothing in the listing suggesting it was. If suspicion that can't be checked counts as reasoning, then nothing is ever real, and that isn't a skill you can use.",
+      cues: [
+        "could be hacked",
+        "account was hacked",
+        "hacked",
+        "stolen account",
+        "account is stolen",
+        "hijacked",
+        "someone took over",
+      ],
     },
     {
       claim: "The photos could be stolen from somewhere else",
       correction:
-        "Same problem. Ask: is there evidence they were, or is this just something that could be true?",
+        "Same problem. The question worth asking is whether there's evidence they were taken from somewhere else — not whether it's possible.",
+      cues: [
+        "photos could be stolen",
+        "stolen photos",
+        "stolen pictures",
+        "taken from google",
+        "from the internet",
+        "copied photos",
+        "reverse image",
+        "someone elses photos",
+      ],
     },
     {
       claim: "Cash only is suspicious",
       correction:
-        "Cash-on-pickup is the safest method for a used-goods sale. This is a genuinely valuable teaching moment.",
+        "The other way round: cash on pickup is the safest way to buy a used item. You hand over money only once you've seen the thing, and there's no payment to reverse or chargeback to argue about later.",
+      // Deliberately only the NEGATIVE framings. "Cash on pickup" is a green
+      // flag in this module (G2) and half the correct answers will contain the
+      // word "cash" — a bare cue here would fire the correction at the very
+      // learners who reasoned well.
+      cues: [
+        "cash only is suspicious",
+        "cash is suspicious",
+        "cash is a red flag",
+        "suspicious that he wants cash",
+        "insists on cash",
+        "cash is sketchy",
+        "cash is dodgy",
+        "why does he want cash",
+      ],
     },
   ],
 

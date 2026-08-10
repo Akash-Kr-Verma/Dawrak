@@ -112,12 +112,12 @@ export default function LearnPage() {
             <h2 className="text-xl font-black text-slate-900 leading-snug">
               {nextModule.title}
             </h2>
-            <div className="flex items-center gap-3 text-xs text-slate-500">
-              <span>{FORMAT_LABEL[nextModule.format]}</span>
-              <span>·</span>
-              <span>~{Math.round(nextModule.est_seconds / 60)} min</span>
-              <span>·</span>
-              <span>Difficulty {nextModule.difficulty}/5</span>
+            {/* Difficulty and estimated time used to sit here. Neither helped
+                anyone decide anything — a difficulty score before you've seen
+                the scenario is just a warning, and "~2 min" is a promise the
+                interactive modules don't keep. Nothing replaces them. */}
+            <div className="text-xs text-slate-500">
+              {FORMAT_LABEL[nextModule.format]}
             </div>
             <Link
               href={`/learn/${nextModule.slug}`}
@@ -168,8 +168,7 @@ export default function LearnPage() {
                       </h4>
                       <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
                         <Icon className="w-3 h-3" />
-                        {FORMAT_LABEL[m.format]} · ~{Math.round(m.est_seconds / 60)} min ·
-                        difficulty {m.difficulty}/5
+                        {FORMAT_LABEL[m.format]}
                       </p>
                       {/* Completing one module unlocks mentoring for that
                           module alone — surfaced here, where it is earned. A

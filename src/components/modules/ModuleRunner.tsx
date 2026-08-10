@@ -12,9 +12,8 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
-  Loader2,
+  ChevronDown,
   ShieldAlert,
-  Sparkles,
   BookOpen,
 } from "lucide-react";
 
@@ -46,16 +45,36 @@ interface GradeResponse extends GradeResult {
   reveal: ModuleReveal;
 }
 
+export type { GradeResponse };
+
+export interface GradeRequest {
+  moduleSlug: string;
+  learnerVerdict: LearnerVerdict | null;
+  learnerReasoning: string;
+  behaviouralLog: Record<string, unknown>;
+}
+
 export function ModuleRunner({
   module: mod,
   learnerFirstName,
   pack = "base",
   onFinished,
+  gradeLocally,
 }: {
   module: RunnableModule;
   learnerFirstName?: string;
   pack?: LanguagePackId;
   onFinished?: () => void;
+  /**
+   * Dev-preview escape hatch. When supplied, submitting grades through this
+   * instead of POSTing to /api/modules/grade — which needs a signed-in session
+   * and a seeded database, neither of which the preview harness has.
+   *
+   * The preview route already imports the authored content, answers included,
+   * so this exposes nothing that route didn't already have. It is what makes
+   * the feedback half of a module testable at all without a live Supabase.
+   */
+  gradeLocally?: (req: GradeRequest) => Promise<GradeResponse>;
 }) {
   // Tokens are resolved once, here, so every renderer downstream sees plain
   // strings. Module 01 personalizes on purpose — that IS signal S5.
@@ -87,9 +106,6 @@ export function ModuleRunner({
   const [verdict, setVerdict] = React.useState<LearnerVerdict | null>(null);
   const [reasoning, setReasoning] = React.useState("");
   const [behaviour, setBehaviour] = React.useState<Record<string, unknown>>({});
-  const [behaviourFeedback, setBehaviourFeedback] = React.useState<
-    Array<{ key: string; feedback: string; positive: boolean }>
-  >([]);
   const [result, setResult] = React.useState<GradeResponse | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -127,6 +143,19 @@ export function ModuleRunner({
     setStage("grading");
     setError(null);
     try {
+      if (gradeLocally) {
+        setResult(
+          await gradeLocally({
+            moduleSlug: mod.slug,
+            learnerVerdict: verdict,
+            learnerReasoning: reasoning,
+            behaviouralLog: behaviour,
+          })
+        );
+        setStage("feedback");
+        return;
+      }
+
       const res = await authedFetch({
         moduleSlug: mod.slug,
         learnerVerdict: verdict,
@@ -144,8 +173,9 @@ export function ModuleRunner({
   }
 
   function onCallComplete(outcome: CallOutcome) {
+    // Only the log crosses over. Which outcomes fired, and what they mean, is
+    // decided server-side from the module's own call_script at grade time.
     setBehaviour(outcome.log);
-    setBehaviourFeedback(outcome.outcomeFeedback);
     setStage("judgement");
   }
 
@@ -241,36 +271,24 @@ export function ModuleRunner({
 
   // --- Judgement -----------------------------------------------------------
   if (stage === "judgement" || stage === "grading") {
+    // Every module asks the same question with the same two buttons. Module 07
+    // used to relabel them (Accurate picture / Misleading) and Modules 06 and
+    // 09 had their own wording too; the content files now all carry Real/Fake,
+    // and the labels are read rather than hardcoded so a language pack can
+    // still translate them.
     const labels = mod.verdict_labels ?? { positive: "Real", negative: "Fake" };
-    // Module 07 asks about accuracy rather than authenticity, because every
-    // fact in it is true. Same two buttons, honest question.
-    const positiveValue: LearnerVerdict =
-      labels.positive === "Accurate picture" ? "accurate" : "real";
-    const negativeValue: LearnerVerdict =
-      labels.negative === "Misleading" ? "misleading" : "fake";
+    const positiveValue: LearnerVerdict = "real";
+    const negativeValue: LearnerVerdict = "fake";
 
     const busy = stage === "grading";
 
     return (
       <div className="max-w-xl mx-auto space-y-5">
-        {behaviourFeedback.length > 0 && (
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
-            <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-600">
-              What you did
-            </h4>
-            {behaviourFeedback.map((b) => (
-              <p
-                key={b.key}
-                className={`text-sm leading-relaxed ${
-                  b.positive ? "text-emerald-800" : "text-slate-700"
-                }`}
-              >
-                {b.feedback}
-              </p>
-            ))}
-          </div>
-        )}
-
+        {/* What the learner DID is deliberately not shown here any more. Those
+            lines are evaluative ("You did the right thing, and you did it
+            fast"), and printing them above the Real/Fake buttons handed over
+            the answer before the judgement was made. They now appear in the
+            feedback, where they belong. */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-5">
           <div className="space-y-3">
             <label className="block text-sm font-bold text-slate-900">
@@ -326,22 +344,13 @@ export function ModuleRunner({
             </div>
           )}
 
+          {/* Text only, in both states. */}
           <button
             onClick={handleSubmit}
             disabled={busy || !verdict || reasoning.trim().length < 10}
-            className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold rounded-xl text-sm"
           >
-            {busy ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
-                Checking your reasoning…
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-                Submit
-              </>
-            )}
+            {busy ? "Checking your reasoning…" : "Submit"}
           </button>
         </div>
       </div>
@@ -374,6 +383,18 @@ const SCORE_STYLE: Record<string, { label: string; cls: string }> = {
   reject: { label: "Let's look again", cls: "bg-slate-50 border-slate-200 text-slate-900" },
 };
 
+/**
+ * The post-answer sequence.
+ *
+ * This used to be one card of personalized text followed by the entire
+ * canonical_reasoning essay — six or seven paragraphs, immediately after an
+ * interactive scenario, which is the exact moment nobody reads an essay. The
+ * writing was good and almost none of it landed.
+ *
+ * Same content, four steps: what you noticed → the strongest clue → the other
+ * signals → the takeaway. The full essay is still here, one tap away, for the
+ * learners who want it — nothing was deleted to make this shorter.
+ */
 function FeedbackPanel({
   module: mod,
   result,
@@ -384,25 +405,21 @@ function FeedbackPanel({
   onFinished?: () => void;
 }) {
   const [showReveal, setShowReveal] = React.useState(false);
+  const [showFull, setShowFull] = React.useState(false);
   const style = SCORE_STYLE[result.score] ?? SCORE_STYLE.reject;
+  const blocks = result.blocks;
 
   return (
-    <div className="max-w-xl mx-auto space-y-5">
+    <div className="max-w-xl mx-auto space-y-4">
+      {/* 1 — What you noticed. The only personal part, and it goes first. */}
       <div className={`rounded-2xl border p-5 space-y-3 ${style.cls}`}>
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-black">{style.label}</h3>
-          <div className="flex items-center gap-1.5">
-            {result.signals_hit.map((s) => (
-              <span
-                key={s}
-                className="px-2 py-0.5 rounded-full bg-white/70 text-[10px] font-black"
-              >
-                {s}
-              </span>
-            ))}
-          </div>
+          <span className="text-[11px] font-black uppercase tracking-wider opacity-70">
+            What you noticed
+          </span>
+          <span className="text-[11px] font-black opacity-70">{style.label}</span>
         </div>
-        <p className="text-sm leading-relaxed">{result.feedback}</p>
+        <p className="text-sm leading-relaxed">{blocks?.noticed || result.feedback}</p>
 
         {result.advanced_reasoner && (
           <p className="text-xs font-bold">
@@ -411,38 +428,112 @@ function FeedbackPanel({
         )}
       </div>
 
-      {/* Corrections for near-miss traps. dangerous_reasoning is surfaced
-          rather than buried inside a PARTIAL — it's the one category of wrong
-          answer that could actually cost someone money. */}
-      {result.dangerous_reasoning && (
-        <div className="rounded-2xl border border-rose-300 bg-rose-50 p-4 space-y-1.5">
-          <div className="flex items-center gap-1.5 text-rose-800">
+      {/* Corrections. dangerous_reasoning is surfaced rather than buried inside
+          a PARTIAL — it's the one category of wrong answer that could actually
+          cost someone money. */}
+      {blocks?.corrections?.length > 0 && (
+        <div
+          className={`rounded-2xl border p-4 space-y-1.5 ${
+            result.dangerous_reasoning
+              ? "border-rose-300 bg-rose-50"
+              : "border-amber-200 bg-amber-50"
+          }`}
+        >
+          <div
+            className={`flex items-center gap-1.5 ${
+              result.dangerous_reasoning ? "text-rose-800" : "text-amber-800"
+            }`}
+          >
             <AlertTriangle className="w-4 h-4" />
             <span className="text-[11px] font-black uppercase tracking-wider">
               Worth stopping on
             </span>
           </div>
-          {result.corrections
-            .filter((c) => c.claim.toLowerCase().includes("small amount"))
-            .map((c) => (
-              <p key={c.claim} className="text-sm text-rose-900 leading-relaxed">
-                {c.correction}
-              </p>
-            ))}
+          {blocks.corrections.map((c, i) => (
+            <p
+              key={i}
+              className={`text-sm leading-relaxed ${
+                result.dangerous_reasoning ? "text-rose-900" : "text-amber-900"
+              }`}
+            >
+              {c}
+            </p>
+          ))}
         </div>
       )}
 
-      {/* The locked reasoning. Read from the DB, never generated. */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
-        <div className="flex items-center gap-2 text-slate-600">
-          <BookOpen className="w-4 h-4" />
-          <span className="text-[11px] font-black uppercase tracking-wider">
-            What was actually going on
+      {/* 2 — The one piece of evidence that settles it. */}
+      {blocks?.strongest && (
+        <div className="bg-white rounded-2xl border-2 border-slate-900 p-5 space-y-2">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+            Strongest clue
           </span>
+          <p className="text-sm text-slate-900 leading-relaxed">
+            <RichText text={blocks.strongest} />
+          </p>
         </div>
-        <div className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-          <RichText text={result.canonical_reasoning} />
+      )}
+
+      {/* 3 — Everything else, short. */}
+      {blocks?.others?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2.5">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+            Other signals
+          </span>
+          <ul className="space-y-2">
+            {blocks.others.map((o, i) => (
+              <li key={i} className="flex gap-2.5 text-sm text-slate-800 leading-relaxed">
+                <span className="text-slate-400 shrink-0" aria-hidden>
+                  —
+                </span>
+                <span>
+                  <RichText text={o} />
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
+      )}
+
+      {/* 4 — The one line worth keeping. */}
+      {blocks?.takeaway && (
+        <div className="bg-slate-900 text-white rounded-2xl p-5 space-y-2">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+            Takeaway
+          </span>
+          <p className="text-sm leading-relaxed">
+            <RichText text={blocks.takeaway} />
+          </p>
+        </div>
+      )}
+
+      {/* The locked reasoning. Read from the DB, never generated. Collapsed by
+          default: it is the long version of everything above, and a learner who
+          wants it should have it — without it being the wall of text that
+          arrives the second they finish. */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <button
+          onClick={() => setShowFull((v) => !v)}
+          aria-expanded={showFull}
+          className="w-full px-5 py-4 flex items-center justify-between gap-3 text-left"
+        >
+          <span className="flex items-center gap-2 text-slate-700">
+            <BookOpen className="w-4 h-4 shrink-0" />
+            <span className="text-[11px] font-black uppercase tracking-wider">
+              The full breakdown
+            </span>
+          </span>
+          <ChevronDown
+            className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${
+              showFull ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+        {showFull && (
+          <div className="px-5 pb-5 text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+            <RichText text={result.canonical_reasoning} />
+          </div>
+        )}
       </div>
 
       {!showReveal ? (

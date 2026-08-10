@@ -21,7 +21,8 @@ export const m09: AuthoredModule = {
 
 **Read your screen carefully before you decide.**`,
   question_variant: null,
-  verdict_labels: { positive: "Real", negative: "Scam" },
+  // Was Real/Scam. Standardized with the rest of the set.
+  verdict_labels: { positive: "Real", negative: "Fake" },
 
   render_spec: {
     engine: "action_flow",
@@ -117,6 +118,21 @@ export const m09: AuthoredModule = {
       polarity: "red_flag",
       tier: "primary",
       note: "One rule, covers every version of this scam forever. Sufficient alone for full credit.",
+      short:
+        "You never enter your PIN to receive money. Your PIN authorizes money leaving your account — that is all it does. Receiving is passive.",
+      cues: [
+        "pin",
+        "never enter",
+        "dont enter",
+        "do not enter",
+        "password",
+        "to receive money",
+        "receiving money",
+        "authorise",
+        "authorize",
+        "approve",
+        "only when paying",
+      ],
     },
     {
       id: "S2",
@@ -125,6 +141,21 @@ export const m09: AuthoredModule = {
       weight: 3,
       polarity: "red_flag",
       tier: "primary",
+      short:
+        "The screen says “requesting from you” and “Paying from” your own account. The app was stating the direction of the money the entire time.",
+      cues: [
+        "requesting from you",
+        "paying from",
+        "the screen said",
+        "the screen says",
+        "direction",
+        "money leaving",
+        "sending not receiving",
+        "it was a request",
+        "request not a payment",
+        "my account",
+        "read the screen",
+      ],
     },
     {
       id: "S3",
@@ -133,6 +164,19 @@ export const m09: AuthoredModule = {
       weight: 3,
       polarity: "red_flag",
       tier: "expert",
+      short:
+        "A failed payment is never fixed by the seller paying. If it failed, the money is still with him — nothing about that needs anything from you.",
+      cues: [
+        "failed payment",
+        "if it failed",
+        "money is still with him",
+        "still has the money",
+        "doesnt make sense",
+        "makes no sense",
+        "why would i pay",
+        "my paying doesnt fix",
+        "nothing to do with me",
+      ],
     },
     {
       id: "S4",
@@ -141,6 +185,19 @@ export const m09: AuthoredModule = {
       weight: 2,
       polarity: "red_flag",
       tier: "advanced",
+      short:
+        "You never saw the error — you only heard about it. The only thing that can tell you whether money arrived is your own account.",
+      cues: [
+        "never saw",
+        "didnt see the error",
+        "only his word",
+        "his story",
+        "he said",
+        "cant verify",
+        "check my own account",
+        "check my balance",
+        "no proof",
+      ],
     },
     {
       id: "S5",
@@ -149,6 +206,20 @@ export const m09: AuthoredModule = {
       weight: 2,
       polarity: "red_flag",
       tier: "advanced",
+      short:
+        "Manufactured hurry — “one second only”, a queue behind him. The rush exists to keep you off your own screen.",
+      cues: [
+        "hurry",
+        "rush",
+        "rushing",
+        "urgency",
+        "one second",
+        "pressure",
+        "pressuring",
+        "quickly",
+        "no time to",
+        "distract",
+      ],
     },
     {
       id: "S6",
@@ -156,6 +227,17 @@ export const m09: AuthoredModule = {
       weight: 2,
       polarity: "red_flag",
       tier: "advanced",
+      short:
+        "“Payment failed clearing” is text he typed into the note field. It appears on the screen looking like part of the app's own interface.",
+      cues: [
+        "note field",
+        "the note",
+        "he wrote",
+        "typed by him",
+        "not from the app",
+        "message on the screen",
+        "payment failed clearing",
+      ],
     },
     {
       id: "S7",
@@ -164,6 +246,18 @@ export const m09: AuthoredModule = {
       weight: 1,
       polarity: "red_flag",
       tier: "expert",
+      short:
+        "The safe button is the small grey one and the costly one is big and green. The interface is nudging you toward the loss.",
+      cues: [
+        "button",
+        "buttons",
+        "decline is small",
+        "pay is big",
+        "green button",
+        "grey button",
+        "design of the screen",
+        "nudge",
+      ],
     },
   ],
 
@@ -196,26 +290,66 @@ And this isn't about being bad with technology. This scam works on people who us
       "The closing note is not optional: the victims of this scam are frequently older or less confident with English-language interfaces. A module that lands as 'don't be like that vendor' teaches contempt instead of skill. The vulnerability is SOCIAL, not technical.",
       "No shaming if they entered the PIN. 'This is the exact moment it happens. It just happened somewhere safe.'",
     ],
+    feedback: {
+      strongest:
+        "You never enter your PIN to receive money. Your PIN authorizes money leaving your account — that is the only thing it does. Receiving is passive: someone sends, it arrives, you do nothing. So any situation where you're asked for your PIN in order to get paid has the direction of the money backwards, and there are no exceptions to check for.",
+      takeaway:
+        "PIN means paying, always. And read the screen your own app is showing you before you touch anything — especially when someone is talking while you do it. The talking is the attack.",
+      wrongVerdictNote:
+        "This isn't about being bad with technology — it works on people who use these apps forty times a day. It targets the two seconds when you're being helpful and someone else is narrating your screen for you.",
+    },
   },
 
   distractors: [
     {
       claim: "He looked suspicious / was too well-dressed",
       correction:
-        "He was well-dressed on purpose, and appearance is never evidence. Actively correct this one; it's the seed of profiling.",
+        "He was well-dressed on purpose, and how someone looks is never evidence. Worth pushing back on hard: that instinct will have you trusting the smart ones and suspecting your ordinary customers.",
+      cues: [
+        "looked suspicious",
+        "well dressed",
+        "his appearance",
+        "the way he looked",
+        "shifty",
+        "dodgy looking",
+        "seemed like a",
+      ],
     },
     {
       claim: "QR codes are dangerous",
       correction:
-        "The QR was fine. Overcorrecting here makes people afraid of a technology instead of alert to a direction of flow.",
+        "The QR code was fine — it's your own code, doing what it's for. Becoming afraid of the technology is the wrong lesson; the thing to watch is the direction of the money.",
+      cues: [
+        "qr code",
+        "qr codes are",
+        "scanning is dangerous",
+        "dont scan",
+        "the code was",
+      ],
     },
     {
       claim: "The vendor should have known English",
-      correction: "The scam works on fluent speakers too. Redirect firmly.",
+      correction:
+        "This works on fluent English speakers just as reliably. The vulnerability here is social, not linguistic — someone friendly talking over you while you read.",
+      cues: [
+        "should have known english",
+        "didnt understand english",
+        "language barrier",
+        "couldnt read english",
+        "his english",
+      ],
     },
     {
       claim: "He should have just used cash",
-      correction: "Avoidance isn't literacy.",
+      correction:
+        "Avoiding the tool isn't the same as knowing how to use it. A stall that takes cash only loses customers, and the rule you actually need takes one sentence.",
+      cues: [
+        "should have used cash",
+        "just use cash",
+        "cash only",
+        "avoid these apps",
+        "shouldnt use the app",
+      ],
     },
   ],
 

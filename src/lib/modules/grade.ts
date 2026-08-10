@@ -26,6 +26,11 @@ import type {
   ModuleSignal,
   RubricClause,
 } from "@/types/modules";
+import {
+  matchDistractors,
+  matchSignals,
+  type CueMatch,
+} from "./matchReasoning";
 
 export interface ExtractionResult {
   /** Signal ids the learner named. Anything not in the module's list is dropped. */
@@ -34,6 +39,12 @@ export interface ExtractionResult {
   distractors_hit: number[];
   /** The model's feedback sentence(s). Score-free. */
   feedback: string;
+  /**
+   * Cue matches carrying the learner's own words. Always populated by the
+   * deterministic matcher, even on the AI path — the model returns ids, and
+   * feedback that quotes the learner needs the spans.
+   */
+  matches: CueMatch[];
 }
 
 export interface GradeInput {
@@ -171,6 +182,34 @@ export function gradeAttempt(input: GradeInput): GradeOutcome {
 }
 
 /**
+ * The signals that settle a module ON THEIR OWN, read out of the rubric.
+ *
+ * `weight` is not this. Weight ranks how much a signal matters; the rubric
+ * decides what is sufficient, and the two genuinely differ — Module 06's
+ * "forwarded many times" and Module 10's "six spots before midnight" are both
+ * weight 3 and neither earns full credit alone, because each only counts
+ * alongside a second signal from the same group.
+ *
+ * Feedback has to agree with the grader about that. Telling a learner they
+ * "went straight to the thing that settles it" and then scoring them PARTIAL is
+ * worse than either message on its own.
+ *
+ * An accept clause is individually decisive when it names ids outright, or when
+ * it needs only one of a set. A clause requiring two or more is a combination,
+ * so none of its members qualifies alone.
+ */
+export function decisiveSignalIds(rubric: ModuleRubric): string[] {
+  const ids = new Set<string>();
+  for (const clause of rubric.accept ?? []) {
+    (clause.names ?? []).forEach((id) => ids.add(id));
+    if (clause.anyOf && (clause.min ?? 1) === 1) {
+      clause.anyOf.forEach((id) => ids.add(id));
+    }
+  }
+  return Array.from(ids);
+}
+
+/**
  * Feedback names at most ONE signal the learner missed, highest weight first.
  * More than one is a lecture, not feedback.
  */
@@ -192,63 +231,31 @@ export function highestWeightMissed(
 // ---------------------------------------------------------------------------
 
 /**
- * Used when the model call fails or no API key is configured. Matches the
- * learner's text against keywords derived from each signal.
+ * Match the learner's text against the authored cues on each signal.
  *
- * This is deliberately conservative: it under-credits rather than over-credits,
- * because a false ACCEPT teaches a learner that a weak reason was a good one.
- * Attempts graded this way are tagged `graded_by: 'deterministic'` so they can
- * be told apart in the data.
+ * This is no longer only a fallback. It runs on every attempt, because the
+ * feedback quotes the learner's own words and the model returns ids without
+ * spans. When there is no API key — which is the current state of this
+ * deployment — it is also the whole extraction step.
+ *
+ * It under-credits rather than over-credits by design: a cue has to be present,
+ * in order, for the signal to count. A false ACCEPT teaches a learner that a
+ * weak reason was a good one, which is worse than a PARTIAL they disagree with.
  */
 export function extractSignalsHeuristically(
   reasoning: string,
   signals: ModuleSignal[],
   distractors: ModuleDistractor[]
 ): ExtractionResult {
-  const text = normalize(reasoning);
+  const matches = matchSignals(reasoning, signals);
+  const distractorMatches = matchDistractors(reasoning, distractors);
 
-  const signals_hit = signals
-    .filter((s) => {
-      const terms = keyTerms(s.signal);
-      if (terms.length === 0) return false;
-      const matched = terms.filter((t) => text.includes(t)).length;
-      // Require a real overlap, not one incidental word.
-      return matched >= Math.min(2, terms.length);
-    })
-    .map((s) => s.id);
-
-  const distractors_hit = distractors
-    .map((d, i) => ({ d, i }))
-    .filter(({ d }) => {
-      const terms = keyTerms(d.claim);
-      if (terms.length === 0) return false;
-      return terms.filter((t) => text.includes(t)).length >= Math.min(2, terms.length);
-    })
-    .map(({ i }) => i);
-
-  return { signals_hit, distractors_hit, feedback: "" };
-}
-
-const STOPWORDS = new Set([
-  "the", "and", "for", "you", "your", "that", "this", "with", "not", "are",
-  "was", "but", "has", "have", "from", "they", "them", "their", "what", "who",
-  "how", "why", "into", "than", "then", "when", "there", "here", "its", "it's",
-  "one", "two", "any", "all", "can", "cannot", "never", "always", "every",
-  "real", "fake", "does", "doesn't", "isn't", "because", "which", "would",
-  "about", "just", "only", "also", "more", "most", "other", "some", "such",
-  "thing", "things", "something", "anything", "nothing", "someone", "anyone",
-]);
-
-function normalize(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ");
-}
-
-function keyTerms(s: string): string[] {
-  return Array.from(
-    new Set(
-      normalize(s)
-        .split(" ")
-        .filter((w) => w.length >= 4 && !STOPWORDS.has(w))
-    )
-  ).slice(0, 6);
+  return {
+    signals_hit: Array.from(new Set(matches.map((m) => m.id))),
+    distractors_hit: Array.from(
+      new Set(distractorMatches.map((m) => Number(m.id)))
+    ).filter((i) => Number.isInteger(i)),
+    feedback: "",
+    matches,
+  };
 }

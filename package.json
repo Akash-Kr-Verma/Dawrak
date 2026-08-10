@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "seed:modules": "node scripts/generate-module-seed.mjs",
+    "test:feedback": "node scripts/test-module-feedback.mjs",
     "test:modules": "node supabase/tests/module-system.test.mjs",
     "test:mentoring": "node supabase/tests/mentoring.test.mjs",
     "test:challenge": "node supabase/tests/challenge.test.mjs"

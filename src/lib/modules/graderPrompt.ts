@@ -65,24 +65,32 @@ ${distractorsList}
 RULES — follow exactly:
 1. Credit ONLY signals from the list above. If the learner names a
    reason that is not in the list and not in the distractor list,
-   note it as "interesting but not the strongest evidence here" —
    do not count it toward the score.
 2. Do not invent additional red flags. Do not restate the full
-   canonical reasoning. The learner sees that after you respond.
+   canonical reasoning — the learner sees the module's own
+   explanation immediately after you, so anything you add there is
+   duplication.
 3. Do NOT decide the score. Your job is extraction: report which
    signal ids the learner actually named, and which distractors (by
    index) their reasoning rests on. The rubric is applied separately.
    A signal counts as named only if the learner expressed the idea —
    not if they merely used a similar word.
-4. In your feedback, name at most ONE signal the learner missed.
-   Pick the highest-weight one. More than one is a lecture.
+4. \`noticed\` is ONE sentence, about THIS learner's specific wording,
+   and it must be something the composed feedback could not already
+   say from the signal list alone: an observation they made that is
+   real but doesn't map to a listed signal, a place where two of
+   their reasons pull against each other, or a specific misreading
+   of the scenario. If you have nothing of that kind to say, return
+   an empty string. An empty string is the correct and common answer.
+   Never write praise, never summarize their answer back to them,
+   and never state a signal — those are handled elsewhere and
+   duplicating them makes the feedback repeat itself.
 5. Never tell a learner they were foolish, naive, or would have
-   fallen for it. Frame misses as "here's the sharper version of
-   what you were already sensing."
-6. Maximum 4 sentences.
+   fallen for it. Never quote the learner's words back with scare
+   quotes or sarcasm.
 ${constraints ? `\nADDITIONAL CONSTRAINTS FOR THIS MODULE:\n${constraints}\n` : ""}
 Return JSON only:
-{"signals_hit":["S1"],"distractors_hit":[0],"feedback":"..."}`;
+{"signals_hit":["S1"],"distractors_hit":[0],"noticed":""}`;
 }
 
 /**
@@ -93,15 +101,24 @@ Return JSON only:
 export function parseExtraction(raw: string): {
   signals_hit: string[];
   distractors_hit: number[];
-  feedback: string;
+  /** The model's one extra observation, if it had one. Usually empty. */
+  noticed: string;
 } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return { signals_hit: [], distractors_hit: [], feedback: "" };
+    return { signals_hit: [], distractors_hit: [], noticed: "" };
   }
   const o = (parsed ?? {}) as Record<string, unknown>;
+  // `feedback` is read as a fallback so a model that answers in the old shape
+  // still produces something usable rather than silently nothing.
+  const noticed =
+    typeof o.noticed === "string"
+      ? o.noticed
+      : typeof o.feedback === "string"
+      ? o.feedback
+      : "";
   return {
     signals_hit: Array.isArray(o.signals_hit)
       ? o.signals_hit.filter((x): x is string => typeof x === "string")
@@ -109,6 +126,6 @@ export function parseExtraction(raw: string): {
     distractors_hit: Array.isArray(o.distractors_hit)
       ? o.distractors_hit.filter((x): x is number => Number.isInteger(x))
       : [],
-    feedback: typeof o.feedback === "string" ? o.feedback : "",
+    noticed,
   };
 }

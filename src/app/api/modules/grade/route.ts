@@ -17,12 +17,17 @@ import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 
 import {
+  decisiveSignalIds,
   extractSignalsHeuristically,
   gradeAttempt,
+  verdictMatches,
   type ExtractionResult,
 } from "@/lib/modules/grade";
 import { buildGraderPrompt, parseExtraction } from "@/lib/modules/graderPrompt";
+import { assessReasoning } from "@/lib/modules/matchReasoning";
+import { composeFeedback } from "@/lib/modules/composeFeedback";
 import type {
+  CallScript,
   LearnerVerdict,
   ModuleDistractor,
   ModuleRubric,
@@ -96,7 +101,7 @@ export async function POST(req: Request) {
     const { data: mod, error: modError } = await supabase
       .from("learning_modules")
       .select(
-        "id, slug, verdict, signals, rubric, distractors, canonical_reasoning, reveal, skippable_without_penalty"
+        "id, slug, verdict, signals, rubric, distractors, canonical_reasoning, reveal, skippable_without_penalty, call_script"
       )
       .eq("slug", moduleSlug)
       .single();
@@ -134,24 +139,30 @@ export async function POST(req: Request) {
     const behaviour = behaviouralLog ?? {};
 
     // ---- Extraction ------------------------------------------------------
-    let extraction: ExtractionResult;
-    let gradedBy: "ai" | "deterministic" | "action_only" = "ai";
-
+    //
+    // The deterministic cue match runs FIRST and always. It is the only source
+    // of the learner's own spans of text, and the feedback quotes those. The
+    // model, when configured, widens recall on top of it — it never replaces
+    // it, so an absent or failing model degrades the feedback's coverage
+    // rather than its personalization.
     const hasBehaviour = Object.keys(behaviour).length > 0;
+    const shape = assessReasoning(reasoning);
 
-    if (reasoning.length < 10) {
+    const local = extractSignalsHeuristically(reasoning, signals, distractors);
+    let extraction: ExtractionResult = local;
+    let aiNote = "";
+    let gradedBy: "ai" | "deterministic" | "action_only" = "deterministic";
+
+    if (shape.empty || shape.minimal) {
       // Interactive modules can be answered by action alone. That is a valid
       // attempt — the gap between "I knew it was a scam" and "I hung up" is
       // the most valuable thing this app can measure — but there is no text
       // to extract signals from.
-      extraction = { signals_hit: [], distractors_hit: [], feedback: "" };
+      extraction = { signals_hit: [], distractors_hit: [], feedback: "", matches: [] };
       gradedBy = hasBehaviour ? "action_only" : "deterministic";
     } else {
       const ai = aiClient();
-      if (!ai) {
-        extraction = extractSignalsHeuristically(reasoning, signals, distractors);
-        gradedBy = "deterministic";
-      } else {
+      if (ai) {
         try {
           const prompt = buildGraderPrompt({
             moduleVerdict: mod.verdict,
@@ -178,13 +189,23 @@ export async function POST(req: Request) {
             ),
           ])) as OpenAI.Chat.Completions.ChatCompletion;
 
-          extraction = parseExtraction(
+          const parsed = parseExtraction(
             completion.choices[0]?.message?.content || "{}"
           );
+          aiNote = parsed.noticed;
+          extraction = {
+            signals_hit: Array.from(
+              new Set([...local.signals_hit, ...parsed.signals_hit])
+            ),
+            distractors_hit: Array.from(
+              new Set([...local.distractors_hit, ...parsed.distractors_hit])
+            ),
+            feedback: "",
+            matches: local.matches,
+          };
+          gradedBy = "ai";
         } catch (err) {
           console.warn("[/api/modules/grade] AI extraction failed, falling back:", err);
-          extraction = extractSignalsHeuristically(reasoning, signals, distractors);
-          gradedBy = "deterministic";
         }
       }
     }
@@ -200,8 +221,36 @@ export async function POST(req: Request) {
     });
 
     // ---- Feedback --------------------------------------------------------
-    const feedback =
-      extraction.feedback.trim() || composeFallbackFeedback(outcome, gradedBy);
+    //
+    // Which behavioural outcomes fired is derived HERE, from the module's own
+    // call_script, rather than trusted from the client. The client already
+    // shows these lines during the call, but feedback text is not something a
+    // request body gets to supply.
+    const callScript = (mod.call_script ?? null) as CallScript | null;
+    const firedOutcomes = (callScript?.behaviouralOutcomes ?? []).filter(
+      (o) => behaviour[o.key]
+    );
+
+    const blocks = composeFeedback({
+      score: outcome.score,
+      verdictCorrect: verdictMatches(mod.verdict, learnerVerdict ?? null),
+      overFlagged: outcome.over_flagged,
+      signalsHit: outcome.signals_hit,
+      matches: extraction.matches,
+      signals,
+      missedSignal: outcome.missed_signal,
+      distractorsHit: outcome.corrections,
+      decisiveIds: decisiveSignalIds(rubric),
+      frame: rubric.feedback,
+      shape,
+      behaviour: firedOutcomes,
+      hasBehaviour,
+      aiNote,
+    });
+
+    // module_attempts.feedback is a single text column; the personalized line
+    // is the part worth keeping for review and for the mentor flow.
+    const feedback = blocks.noticed;
 
     // ---- Persist ---------------------------------------------------------
     const { error: insertError } = await supabase.from("module_attempts").insert({
@@ -252,6 +301,7 @@ export async function POST(req: Request) {
         over_flagged: outcome.over_flagged,
         dangerous_reasoning: outcome.dangerous_reasoning,
         feedback,
+        blocks,
         graded_by: gradedBy,
         missed_signal: outcome.missed_signal,
         corrections: outcome.corrections,
@@ -275,32 +325,3 @@ function bestOf(a: string | null, b: string): string {
   return (RANK[b] ?? 0) > (RANK[a] ?? 0) ? b : a;
 }
 
-/**
- * Used when the model produced no feedback text (fallback path). Deliberately
- * plain: it must never be the thing that shames a learner, and it must never
- * invent a red flag that isn't in the module's signal list.
- */
-function composeFallbackFeedback(
-  outcome: ReturnType<typeof gradeAttempt>,
-  gradedBy: string
-): string {
-  if (gradedBy === "action_only") {
-    return "Recorded what you did. Read the explanation below — it covers what was going on and the one habit worth keeping.";
-  }
-  const named = outcome.signals_hit.length;
-  const missed = outcome.missed_signal;
-
-  if (outcome.over_flagged) {
-    return "Caution is a good instinct, and this one is genuinely hard. Have a look at the explanation below for the specific evidence that points the other way — being able to say 'this one is fine, and here's why' is the harder half of the skill.";
-  }
-  if (outcome.score === "accept") {
-    return `You named ${named} of the things that actually settle this. That's the evidence-first habit working.`;
-  }
-  if (outcome.score === "partial" && missed) {
-    return `You picked up on something real here. The sharper version of what you were already sensing: ${missed.signal}.`;
-  }
-  if (missed) {
-    return `Have a look at the explanation below. The strongest piece of evidence in this one: ${missed.signal}.`;
-  }
-  return "Have a look at the explanation below — it covers the evidence that settles this one.";
-}

@@ -14,6 +14,7 @@ import {
   ChatHeader,
   FakeAddressBar,
 } from "./primitives";
+import { BikePhotoCarousel } from "./BikePhotos";
 import type { ModuleScreen } from "@/types/modules";
 
 type Blocks = Record<string, any>;
@@ -95,16 +96,12 @@ export function MarketplaceListingScreen({ screen, blocks }: RendererProps) {
   const seller = blocks.seller_card ?? {};
   return (
     <div className="bg-white text-slate-900">
-      <AssetSlot slot="photo_1 … photo_4" label="4-photo carousel" aspect="aspect-[4/3]" />
-      <div className="flex items-center justify-center gap-1.5 py-2">
-        {Array.from({ length: p.photoCount ?? 4 }).map((_, i) => (
-          <span
-            key={i}
-            className={`h-1.5 w-1.5 rounded-full ${i === 0 ? "bg-slate-700" : "bg-slate-300"}`}
-          />
-        ))}
-      </div>
-      <div className="px-4 pb-4 space-y-3">
+      {/* Was a grey placeholder box reading "4-photo carousel". The listing's
+          description points the buyer at the fourth photo for the scratch, so
+          without the photos the module was asking learners to weigh evidence
+          they had never been shown. */}
+      <BikePhotoCarousel />
+      <div className="px-4 pb-4 pt-3 space-y-3">
         <h3 className="text-[20px] font-semibold leading-snug">{blocks.title}</h3>
         <div className="text-[22px] font-bold">{blocks.price}</div>
         <div className="text-[13px] text-slate-500">{blocks.meta}</div>
@@ -333,8 +330,25 @@ export function InstitutionalPortalScreen({ screen, blocks }: RendererProps) {
 
 /**
  * The chart is built as SVG in-app rather than shipped as an image, so the
- * truncated axis is exact and it localizes. The deception is precise and
- * intentional: y starts at 1, there is no axis title, no units, no source.
+ * truncated axis is exact and it localizes.
+ *
+ * The deception is precise and intentional, and every part of it is still here:
+ * the axis starts at 1 rather than 0, so 8 looks vastly more than four times 2;
+ * a heavy red arrow is drawn over the top implying a trajectory that two points
+ * cannot support; there is no axis title, no units, no baseline, and no
+ * comparison to any other period. The source line is real and readable — and
+ * styled to be skipped.
+ *
+ * What changed is that the DATA is now legible. The learner is asked whether
+ * this post gives them a real picture, and previously they could not read the
+ * two values off the chart at all: no tick marks, no value labels, nothing. The
+ * lesson has to be "you didn't look", never "you couldn't look" — a chart you
+ * can't read is unfair rather than misleading, and the difference matters,
+ * because the technique being taught is one that survives full disclosure.
+ *
+ * Note what is deliberately NOT done: the axis break is not annotated, the bars
+ * are not colour-coded by honesty, nothing is highlighted or ringed. Signposting
+ * the trick would hand over the answer.
  */
 export function CommunityPostWithChartScreen({ screen, blocks }: RendererProps) {
   const p = (screen.props ?? {}) as any;
@@ -344,7 +358,12 @@ export function CommunityPostWithChartScreen({ screen, blocks }: RendererProps) 
   const [zoomed, setZoomed] = React.useState(false);
 
   const max = Math.max(...bars.map((b) => b.value), yStart + 1);
-  const height = (v: number) => ((v - yStart) / (max - yStart)) * 100;
+  // Plot area: y=24 (top) to y=132 (baseline).
+  const BASE = 132;
+  const TOP = 24;
+  const height = (v: number) => ((v - yStart) / (max - yStart)) * (BASE - TOP);
+  // Ticks every 1 from the truncated start, as a real chart would label them.
+  const ticks = Array.from({ length: max - yStart + 1 }, (_, i) => yStart + i);
 
   return (
     <div className="bg-white text-slate-900">
@@ -363,37 +382,83 @@ export function CommunityPostWithChartScreen({ screen, blocks }: RendererProps) 
           <div className="text-[11px] font-bold text-slate-700 mb-2">
             {chart.title}
           </div>
-          <svg viewBox="0 0 200 120" className="w-full h-32" role="img" aria-label="Two-bar chart with a truncated y-axis">
+          <svg
+            viewBox="0 0 220 156"
+            className="w-full h-44"
+            role="img"
+            aria-label={`Bar chart. ${bars
+              .map((b) => `${b.label}: ${b.value}`)
+              .join(", ")}. The vertical axis starts at ${yStart}, not at zero.`}
+          >
+            {/* Gridlines and value ticks. */}
+            {ticks.map((t) => {
+              const y = BASE - height(t);
+              return (
+                <g key={t}>
+                  <line x1="34" y1={y} x2="212" y2={y} stroke="#e2e8f0" strokeWidth="0.8" />
+                  <text
+                    x="28"
+                    y={y + 3}
+                    textAnchor="end"
+                    fill="#94a3b8"
+                    style={{ fontSize: 8 }}
+                  >
+                    {t}
+                  </text>
+                </g>
+              );
+            })}
+
             {bars.map((b, i) => {
               const h = height(b.value);
+              const x = 60 + i * 76;
               return (
                 <g key={b.label}>
-                  <rect
-                    x={40 + i * 70}
-                    y={110 - h}
-                    width="44"
-                    height={h}
-                    className="fill-red-500"
-                  />
-                  <text x={62 + i * 70} y={118} textAnchor="middle" className="fill-slate-500 text-[8px]">
+                  <rect x={x} y={BASE - h} width="52" height={h} fill="#ef4444" />
+                  {/* The value, on the bar, where a chart puts it. */}
+                  <text
+                    x={x + 26}
+                    y={BASE - h - 5}
+                    textAnchor="middle"
+                    fill="#334155"
+                    style={{ fontSize: 11, fontWeight: 700 }}
+                  >
+                    {b.value}
+                  </text>
+                  <text
+                    x={x + 26}
+                    y={BASE + 13}
+                    textAnchor="middle"
+                    fill="#64748b"
+                    style={{ fontSize: 9 }}
+                  >
                     {b.label}
                   </text>
                 </g>
               );
             })}
-            {/* Heavy upward arrow overlaid. */}
-            <path d="M55 95 L145 25" stroke="#dc2626" strokeWidth="3" />
-            <path d="M145 25 l-14 2 l7 9 z" fill="#dc2626" />
-            {/* Axis line only — no title, no units, no labels. */}
-            <line x1="30" y1="110" x2="190" y2="110" stroke="#cbd5e1" strokeWidth="1" />
+
+            {/* Heavy upward arrow overlaid — the post's own editorializing. */}
+            {chart.overlayArrow !== false && (
+              <>
+                <path d="M74 112 L172 40" stroke="#dc2626" strokeWidth="3" />
+                <path d="M172 40 l-15 2 l8 10 z" fill="#dc2626" />
+              </>
+            )}
+
+            {/* Axes. The vertical one starts at the truncated value, which is
+                exactly what makes the second bar look the way it does. */}
+            <line x1="34" y1={TOP} x2="34" y2={BASE} stroke="#cbd5e1" strokeWidth="1" />
+            <line x1="34" y1={BASE} x2="212" y2={BASE} stroke="#cbd5e1" strokeWidth="1" />
           </svg>
 
-          {/* Legible if you look for it, invisible if you don't. It must be
+          {/* Legible if you look for it, easy to skip if you don't. It must be
               ACTUALLY readable when enlarged — the lesson is "you didn't
               look", not "you couldn't look". */}
           <button
             type="button"
             onClick={() => setZoomed((z) => !z)}
+            aria-expanded={zoomed}
             className={`w-full text-left mt-1 transition-all ${
               zoomed
                 ? "text-[12px] text-slate-800 bg-amber-50 p-2 rounded"

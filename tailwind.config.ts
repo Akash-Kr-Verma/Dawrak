@@ -29,6 +29,18 @@ const config: Config = {
           foreground: "#0F172A",
         },
       },
+      // Used by the interactive call: each line of the conversation arrives
+      // rather than appearing. A call where six sentences pop into existence at
+      // once reads as a transcript, not a conversation.
+      keyframes: {
+        "call-line-in": {
+          from: { opacity: "0", transform: "translateY(6px)" },
+          to: { opacity: "1", transform: "none" },
+        },
+      },
+      animation: {
+        "call-line-in": "call-line-in 260ms ease-out both",
+      },
     },
   },
   plugins: [],

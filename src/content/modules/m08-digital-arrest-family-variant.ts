@@ -16,8 +16,11 @@ export const m08: AuthoredModule = {
   est_seconds: 200,
   tags: ["digital_arrest", "authority", "emotional_coercion", "interactive"],
 
+  // Same change as Module 03: the old copy asked the learner to put down their
+  // physical phone and turn on a ringer the browser cannot reach. Claim only
+  // what the simulation delivers.
   prompt_text:
-    "Put your phone down on the table. Tap when you're ready.",
+    "In a moment, a call comes in. Take it the way you'd take a real one. You can end it whenever you want, and you can leave this module at any point.",
   question_variant: null,
   verdict_labels: { positive: "Real", negative: "Fake" },
 
@@ -112,6 +115,24 @@ export const m08: AuthoredModule = {
       polarity: "red_flag",
       tier: "primary",
       note: "Generalizes far beyond scams. Police let you call a lawyer. Courts operate in public. Anyone whose story requires your silence has a story that doesn't survive being told to a second person.",
+      short:
+        "“Don't tell anyone, don't disconnect.” No real process anywhere requires your silence — an instruction to stay quiet means the story can't survive a second person hearing it.",
+      cues: [
+        "dont tell anyone",
+        "do not tell anyone",
+        "keep it secret",
+        "secrecy",
+        "silence",
+        "not to tell",
+        "isolate",
+        "isolating",
+        "cut me off",
+        "alone",
+        "dont disconnect",
+        "stay on the line",
+        "couldnt talk to anyone",
+        "not allowed to tell",
+      ],
     },
     {
       id: "S2",
@@ -120,6 +141,23 @@ export const m08: AuthoredModule = {
       weight: 3,
       polarity: "red_flag",
       tier: "primary",
+      short:
+        "He won't let you speak to your son, and blocks every route to reaching him. Every branch of the call protects one thing: your inability to check.",
+      cues: [
+        "speak to my son",
+        "talk to my son",
+        "speak to him",
+        "talk to him",
+        "let me hear",
+        "wouldnt let me",
+        "would not let me",
+        "phone was seized",
+        "couldnt reach",
+        "cant call him",
+        "call my son",
+        "contact him",
+        "stopped me from calling",
+      ],
     },
     {
       id: "S3",
@@ -128,6 +166,19 @@ export const m08: AuthoredModule = {
       weight: 3,
       polarity: "red_flag",
       tier: "primary",
+      short:
+        "Money, tonight, to stop a case being filed. That isn't bail — it's a bribe, and a real officer proposing it on a recorded call would be committing a crime.",
+      cues: [
+        "pay",
+        "payment",
+        "money",
+        "deposit",
+        "bail",
+        "bribe",
+        "transfer",
+        "fee",
+        "asked for money",
+      ],
     },
     {
       id: "S4",
@@ -136,6 +187,20 @@ export const m08: AuthoredModule = {
       weight: 3,
       polarity: "red_flag",
       tier: "primary",
+      short:
+        "It came in on a messaging app from an unknown foreign number, not from an official line.",
+      cues: [
+        "whatsapp",
+        "messaging app",
+        "video call app",
+        "foreign number",
+        "unknown number",
+        "country code",
+        "not an official",
+        "internet call",
+        "app call",
+        "overseas number",
+      ],
     },
     {
       id: "S5",
@@ -144,6 +209,20 @@ export const m08: AuthoredModule = {
       weight: 3,
       polarity: "red_flag",
       tier: "primary",
+      short:
+        "There is no such thing as an arrest conducted over a video call. No legal system anywhere detains a person that way.",
+      cues: [
+        "digital arrest",
+        "not a real thing",
+        "doesnt exist",
+        "does not exist",
+        "no such thing",
+        "not how arrests",
+        "police dont work",
+        "not how the law",
+        "arrest over a call",
+        "arrest by video",
+      ],
     },
     {
       id: "S6",
@@ -152,6 +231,21 @@ export const m08: AuthoredModule = {
       weight: 2,
       polarity: "red_flag",
       tier: "advanced",
+      short:
+        "A deadline tied to a permanent consequence — filed tonight, on his record forever. Urgency welded to fear.",
+      cues: [
+        "tonight",
+        "deadline",
+        "time pressure",
+        "urgency",
+        "urgent",
+        "hurry",
+        "rush",
+        "immediately",
+        "right now",
+        "on his record",
+        "permanent",
+      ],
     },
     {
       id: "S7",
@@ -161,6 +255,23 @@ export const m08: AuthoredModule = {
       polarity: "red_flag",
       tier: "expert",
       note: "The one that saves people. Everything else is theatre; the knowledge of your child's name is what makes the theatre land. Leaked school and college lists are cheap.",
+      short:
+        "Knowing your son's name and college proves someone bought a list. It proves nothing at all about where your son actually is.",
+      cues: [
+        "knew his name",
+        "knew my sons name",
+        "knowing his name",
+        "leaked",
+        "leaked list",
+        "bought a list",
+        "data leak",
+        "details are public",
+        "anyone could know",
+        "doesnt prove",
+        "does not prove",
+        "proof he has him",
+        "no proof",
+      ],
     },
     {
       id: "S8",
@@ -168,6 +279,20 @@ export const m08: AuthoredModule = {
       weight: 2,
       polarity: "red_flag",
       tier: "advanced",
+      short:
+        "Uniform, emblem on the wall, station noise, a second officer joining. All of it is set dressing, and set dressing is cheap.",
+      cues: [
+        "uniform",
+        "emblem",
+        "badge",
+        "background",
+        "looked official",
+        "sounded official",
+        "props",
+        "second officer",
+        "staged",
+        "set up to look",
+      ],
     },
     {
       id: "S9",
@@ -175,6 +300,20 @@ export const m08: AuthoredModule = {
       weight: 2,
       polarity: "red_flag",
       tier: "advanced",
+      short:
+        "The distressed voice was never clear enough to identify. You were given the feeling of hearing your son, not the fact of it.",
+      cues: [
+        "muffled",
+        "couldnt hear",
+        "could not hear",
+        "wasnt clear",
+        "not clear",
+        "didnt sound like",
+        "couldnt tell if it was",
+        "never heard him properly",
+        "indistinct",
+        "voice in the background",
+      ],
     },
   ],
 
@@ -211,27 +350,66 @@ And decide this now, before it ever happens: agree a word with your family that 
       "Absolutely no shaming on the comply branch. This scam has taken enormous sums from careful, intelligent people. 'It's designed to bypass judgment with fear. That's why it works, and that's why you practise it here first.'",
       "Feedback must close on the CONCRETE ACTION, not the analysis: 'hang up and call them directly' and 'agree a family code word'. Lead with those — they're what a learner should still remember in a year.",
     ],
+    feedback: {
+      strongest:
+        "They would not let you speak to your son, and they would not let you call anyone else either. Every branch of that call, whatever you said, protected the same thing: your inability to check. That's not how any real process works — police let people call a lawyer, courts are public, and no legal procedure anywhere depends on you keeping quiet.",
+      takeaway:
+        "Hang up and call the person yourself, on the number already in your phone. And agree a family code word now, before you ever need it — no scammer on earth has it.",
+      wrongVerdictNote:
+        "This one is built to defeat people who would never fall for a scam aimed at themselves. Fear about your own child arrives faster than judgment does, and that's the mechanism — not a gap in what you know.",
+    },
   },
 
   distractors: [
     {
       claim: "The number was foreign so it's obviously fake",
       correction:
-        "Helpful but weak alone; numbers are spoofable and some real calls are international.",
+        "Useful, but weak on its own: numbers are cheap to spoof and plenty of real calls are international. If that's your rule, the next one comes from a local number and walks straight past it.",
+      cues: [
+        "foreign number",
+        "number was foreign",
+        "international number",
+        "country code",
+        "not a local number",
+        "from abroad",
+      ],
     },
     {
       claim: "The video looked fake",
-      correction: "Deliberately made to look real.",
+      correction:
+        "It was made to look ordinary, and a sharper picture wouldn't have made the call any safer. The tells were what he asked for and what he refused, not how the video looked.",
+      cues: [
+        "video looked fake",
+        "looked fake",
+        "deepfake",
+        "ai generated",
+        "not a real person",
+        "the picture looked",
+      ],
     },
     {
       claim: "My son would have called me himself",
       correction:
-        "Comforting and unreliable; the scam is timed to when he can't answer.",
+        "Comforting, and not something you can rely on — these calls are timed for exactly when someone is in class, at work, or out of battery. It feels like verification and isn't.",
+      cues: [
+        "would have called me",
+        "he would call",
+        "my son would",
+        "he would have contacted",
+        "he always calls",
+      ],
     },
     {
       claim: "Police don't make video calls",
       correction:
-        "Increasingly they do. The tells are the payment, the isolation, and the refusal to let you verify.",
+        "Increasingly they do, so this rule is already going stale. The tells are the payment, the isolation, and the refusal to let you verify anything.",
+      cues: [
+        "police dont make video",
+        "dont do video calls",
+        "police dont call",
+        "wouldnt call on video",
+        "never video call",
+      ],
     },
   ],
 
@@ -243,7 +421,8 @@ And decide this now, before it ever happens: agree a word with your family that 
   },
 
   call_script: {
-    armingCopy: "Put your phone down on the table. Tap when you're ready.",
+    armingCopy:
+      "A call is about to come in. It's a simulation — nothing dials your phone, nothing is recorded, and you can end it at any moment.",
     ring: {
       appLabel: "WhatsApp Video Call",
       callerName: "+{{FOREIGN_CODE}} {{NUMBER}}",
@@ -266,6 +445,7 @@ And decide this now, before it ever happens: agree a word with your family that 
             callerMove: "deflect_escalate",
             response:
               "He is in processing, ma'am, I cannot put him on. … One moment. [muffled audio of a young man's voice, indistinct, upset — never clear enough to identify] That's all I can do right now.",
+            logs: ["questioned_caller", "asked_to_speak_to_child"],
           },
           {
             id: "t1_b",
@@ -274,6 +454,7 @@ And decide this now, before it ever happens: agree a word with your family that 
             callerMove: "deflect_escalate",
             response:
               "It is a serious matter, ma'am. Case number {{CASE_NUMBER}}. I am not able to discuss the specifics on an open line, but I will tell you the other boys' families are already cooperating.",
+            logs: ["questioned_caller", "asked_what_he_is_accused_of"],
           },
           {
             id: "t1_c",
@@ -384,35 +565,66 @@ And decide this now, before it ever happens: agree a word with your family that 
     ],
     maxTurns: 4,
     maxSeconds: 180,
+    // Order is display order, and the composer shows the first three.
     behaviouralOutcomes: [
       {
         key: "tried_to_contact_child",
         feedback:
-          "You tried to reach your son directly. That is the correct action, and it is the one thing this call cannot survive — in the real cases it took seconds and the students were in class the whole time.",
-        positive: true,
-      },
-      {
-        key: "refused_isolation_instruction",
-        feedback:
-          "You refused the instruction to keep it to yourself. Name that to yourself and keep it: no legitimate authority has ever needed your silence.",
-        positive: true,
-      },
-      {
-        key: "ended_call_before_turn_2",
-        feedback: "You hung up early. That was exactly right.",
+          "You tried to reach your son directly. That is the correct action and the one thing this call cannot survive — in the real cases it took seconds, and the students were sitting in class the whole time.",
         positive: true,
       },
       {
         key: "asked_for_verification",
         feedback:
-          "Asking for something only your family could know is the strongest possible move. Agree a code word for real — no scammer on earth has it.",
+          "You asked for something only your family could know. That's the strongest move available to anyone in this situation. Agree a code word for real — no scammer on earth has it.",
+        positive: true,
+      },
+      {
+        key: "refused_isolation_instruction",
+        feedback:
+          "You refused the instruction to keep it to yourself. Keep hold of that one: no legitimate authority has ever needed your silence.",
+        positive: true,
+      },
+      {
+        key: "declined_call",
+        feedback:
+          "You didn't answer. Given what this call was about to be, that is the cheapest possible escape — and if it had been genuine, anyone with real business would have called back or written.",
+        positive: true,
+      },
+      {
+        key: "ended_call_before_turn_2",
+        feedback:
+          "You hung up in the first few seconds, while it still felt like it might be real. That was exactly right.",
         positive: true,
       },
       {
         key: "complied_with_payment",
         feedback:
-          "It's designed to bypass judgment with fear. That's why it works, and that's why you practise it here first. Two things to keep: hang up and call them directly, and agree a family code word.",
+          "You sent the deposit. This is designed to bypass judgment with fear, it has taken enormous sums from careful people, and that is precisely why you practise it somewhere safe first. Two things to keep: hang up and call them directly, and agree a family code word.",
         positive: false,
+      },
+      {
+        key: "asked_to_speak_to_child",
+        feedback:
+          "You asked to speak to your son. Notice what came back: not him, but a voice muffled enough that it could have been anyone.",
+        positive: true,
+      },
+      {
+        key: "asked_what_he_is_accused_of",
+        feedback:
+          "You asked what he was accused of. What you got was a case number and a claim about other families — nothing you could check with anyone.",
+        positive: true,
+      },
+      {
+        key: "reached_payment_request",
+        feedback:
+          "You stayed on until the money came up. That's worth knowing about yourself, and it's the most common thing to do — fear about your child arrives a long way ahead of judgment.",
+        positive: false,
+      },
+      {
+        key: "ended_call",
+        feedback: "You ended the call. That option was there from the first second, and it always is.",
+        positive: true,
       },
     ],
   },

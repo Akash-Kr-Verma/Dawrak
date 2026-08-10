@@ -1,14 +1,18 @@
 // MODULE 07 — "Crime Up 300%" (Misleading But True)
 //
 // The only module where every individual fact is true and the answer is still
-// "don't trust this". A binary real/fake button handles that badly: a learner
-// who taps "real" because the numbers check out has reasoned WELL.
+// "don't trust this".
 //
-// Resolution (spec Option A): keep the two buttons, change the question.
-// `question_variant` carries the accuracy-framed question and `verdict_labels`
-// relabels the buttons. `verdict` stays 'fake' in the DB so nothing else
-// breaks. If the two-stage variant (Option B) is ever built, question_variant
-// splits into stage_1 / stage_2.
+// This used to relabel its buttons to "Accurate picture / Misleading" so that a
+// learner who tapped "real" on true numbers wasn't marked wrong. That solved a
+// real problem and created a worse one: the judgement interaction changed shape
+// in the middle of the set, so the one module about the subtlest technique was
+// also the one where the learner had to relearn the controls.
+//
+// It now asks REAL or FAKE like everything else, and the nuance moved to where
+// it actually belongs — the explanation, which states outright that nothing was
+// fabricated and that the framing is what makes the post fake. `prompt_text`
+// carries the disambiguation the buttons can't.
 import type { AuthoredModule } from "@/types/modules";
 
 export const m07: AuthoredModule = {
@@ -26,10 +30,9 @@ export const m07: AuthoredModule = {
   // up" and learn nothing.
   prompt_text: `This post is going around your local community group. **Every number in it is accurate — nobody made anything up.**
 
-Is it giving you an accurate picture of what's happening in your city?`,
-  question_variant:
-    "Is this post giving you an accurate picture of what's happening in your city?",
-  verdict_labels: { positive: "Accurate picture", negative: "Misleading" },
+A post can still be fake. Judge what it is telling you, not only whether the figures check out.`,
+  question_variant: null,
+  verdict_labels: { positive: "Real", negative: "Fake" },
 
   render_spec: {
     engine: "screen_sequence",
@@ -50,9 +53,17 @@ Is it giving you an accurate picture of what's happening in your city?`,
               { label: "Feb", value: 8 },
             ],
             // Starting at 1 instead of 0 makes the second bar look far taller
-            // than four-times-taller. Signal S4.
+            // than four-times-taller. Signal S4. With 8 ticks over the plot
+            // area, 8 renders seven times the height of 2 — the real ratio is
+            // four. That gap is the whole of S4 and it is exact.
             yAxisStart: 1,
-            yAxisLabeled: false,
+            // The axis IS labelled now, and the bars carry their values. The
+            // learner is being asked whether the post gives a real picture;
+            // they cannot answer that about a chart whose numbers they can't
+            // read. The deception is the truncation and the arrow, not
+            // illegibility — and it survives being fully readable, which is
+            // precisely what makes this technique worth teaching.
+            yAxisLabeled: true,
             barColor: "red",
             overlayArrow: true,
             axisTitle: null,
@@ -109,6 +120,28 @@ compared with February (8 incidents).`,
       weight: 3,
       polarity: "red_flag",
       tier: "primary",
+      short:
+        "2 → 8 is a 300% increase and also six more incidents. Both are true; the post picked the one that sounds like a catastrophe.",
+      cues: [
+        "raw numbers",
+        "actual numbers",
+        "real numbers are small",
+        "small numbers",
+        "tiny numbers",
+        "only 6",
+        "six more",
+        "only six",
+        "2 to 8",
+        "two to eight",
+        "from 2 to 8",
+        "just 8",
+        "only 8 incidents",
+        "percentage sounds",
+        "percentage makes",
+        "sounds bigger",
+        "small base",
+        "300 sounds",
+      ],
     },
     {
       id: "S2",
@@ -117,6 +150,22 @@ compared with February (8 incidents).`,
       weight: 3,
       polarity: "red_flag",
       tier: "primary",
+      short:
+        "The headline says “this year”. The data is one month against the next — January versus February.",
+      cues: [
+        "january",
+        "february",
+        "two months",
+        "one month",
+        "month to month",
+        "not a year",
+        "isnt a year",
+        "whole year",
+        "comparison period",
+        "time period",
+        "period",
+        "two months isnt",
+      ],
     },
     {
       id: "S3",
@@ -125,6 +174,20 @@ compared with February (8 incidents).`,
       weight: 3,
       polarity: "red_flag",
       tier: "primary",
+      short:
+        "One neighbourhood's incident log, presented as the whole city. The sample and the claim are different sizes.",
+      cues: [
+        "neighbourhood",
+        "neighborhood",
+        "one area",
+        "one district",
+        "whole city",
+        "citywide",
+        "entire city",
+        "not the city",
+        "sample",
+        "local area",
+      ],
     },
     {
       id: "S4",
@@ -133,6 +196,23 @@ compared with February (8 incidents).`,
       weight: 2,
       polarity: "red_flag",
       tier: "advanced",
+      short:
+        "The chart's axis starts at 1 rather than 0, so the second bar looks enormously taller instead of four times taller.",
+      cues: [
+        "axis",
+        "y axis",
+        "starts at 1",
+        "doesnt start at zero",
+        "not start at zero",
+        "start from zero",
+        "scale",
+        "truncated",
+        "chart exaggerates",
+        "graph exaggerates",
+        "bar looks",
+        "chart is misleading",
+        "graph is misleading",
+      ],
     },
     {
       id: "S5",
@@ -142,6 +222,25 @@ compared with February (8 incidents).`,
       polarity: "red_flag",
       tier: "expert",
       note: "The deepest one. Any two numbers in the world produce a percentage change, and picking the pair that yields the biggest number is a technique, not an analysis.",
+      short:
+        "Two data points can't show a trend. Is 8 a lot for February? Was last February 9? You're given nothing to judge it against.",
+      cues: [
+        "baseline",
+        "no context",
+        "missing context",
+        "compared to what",
+        "two data points",
+        "only two points",
+        "not a trend",
+        "cant show a trend",
+        "no trend",
+        "normal for february",
+        "last year",
+        "previous years",
+        "no comparison",
+        "average",
+        "nothing to compare",
+      ],
     },
     {
       id: "S6",
@@ -150,6 +249,20 @@ compared with February (8 incidents).`,
       weight: 2,
       polarity: "red_flag",
       tier: "advanced",
+      short:
+        "The small print says something different from the headline, and it's styled so you skip over it.",
+      cues: [
+        "small print",
+        "fine print",
+        "small text",
+        "tiny text",
+        "grey text",
+        "underneath",
+        "caption",
+        "footnote",
+        "contradicts",
+        "hidden text",
+      ],
     },
     {
       id: "S7",
@@ -158,6 +271,17 @@ compared with February (8 incidents).`,
       weight: 1,
       polarity: "red_flag",
       tier: "expert",
+      short:
+        "Far more shares than comments, and the top comment is reacting to the headline rather than to any of the data.",
+      cues: [
+        "shares",
+        "shared more",
+        "comments",
+        "engagement",
+        "people sharing",
+        "reacting to the headline",
+        "nobody read",
+      ],
     },
   ],
 
@@ -184,34 +308,91 @@ The question that cuts through it every time: **compared to what?** Not "is this
       { anyOf: ["S4", "S6", "S7"], min: 1, andNot: ["S1", "S2", "S3", "S5"] },
     ],
     bonusAdvanced: ["S5"],
-    // Judging the post accurate is the wrong verdict here.
+    // Calling the post real is the wrong verdict here.
     wrongVerdict: { score: "reject" },
     rejectOnDistractor: true,
     feedbackConstraints: [
       'SPECIAL CASE: if a learner answers "the numbers are fake/made up", that is a REJECT even though they distrusted the post. Correct it explicitly — believing the numbers are false means they have missed the entire lesson and will be defenceless against the next technically-true post.',
       'Saying only "it\'s misleading" with no specific mechanism is PARTIAL, not ACCEPT.',
     ],
+    feedback: {
+      strongest:
+        "Crime went from 2 incidents to 8. That is, correctly, a 300% increase — and it is also six more incidents. Both sentences describe the identical fact, and whoever wrote this chose the one that sounds like a catastrophe. When a very small number grows slightly, percentages explode, which is exactly when percentages get reached for.",
+      takeaway:
+        "“Compared to what?” is usually a better question than “is this true?” — compared to what, over what period, out of how many. If a post won't tell you, that silence is your answer.",
+      // The single most important line in this module. Without it, a learner
+      // can tap FAKE, feel correct, and walk away believing the figures were
+      // invented — which leaves them defenceless against the next post, since
+      // the next one's figures will also survive fact-checking.
+      correctVerdictNote:
+        "One thing to be exact about, because it's the difference between a lesson that protects you and one that doesn't: nobody fabricated these numbers. Every figure in the post is real and would survive a fact-check. It is fake because true information has been framed to make you believe something that isn't so — through the comparison chosen, the context left out, and the shape of the chart.",
+      wrongVerdictNote:
+        "The figures do check out, so reading them as real is honest arithmetic. But the question was whether the post is giving you a real picture, and the fact that every number survives checking is precisely what makes this kind of post so hard to argue with.",
+    },
   },
 
   distractors: [
     {
       claim: "The numbers are made up",
       correction:
-        "They aren't, and the prompt said so. The most common wrong answer here, and it must be corrected explicitly.",
+        "They aren't — the numbers are real, and the prompt said so. This matters more than it looks: if you file this post under “made-up figures”, the next one will have real figures too, and you'll have nothing to catch it with.",
+      cues: [
+        "made up",
+        "make up",
+        "fabricated",
+        "numbers are fake",
+        "figures are fake",
+        "invented",
+        "false numbers",
+        "lying about the numbers",
+        "not real numbers",
+        "statistics are fake",
+      ],
     },
     {
       claim: "It uses emojis and caps so it's not serious",
-      correction: "Tone isn't evidence. Serious outlets do this too.",
+      correction:
+        "Tone isn't evidence. Serious outlets write headlines like this too, and plenty of deceptive posts are written in flat, sober language.",
+      cues: [
+        "emoji",
+        "emojis",
+        "caps",
+        "capital letters",
+        "all caps",
+        "shouting",
+        "clickbait",
+        "the tone",
+        "written like",
+      ],
     },
     {
       claim: "No source is cited",
       correction:
-        "A source IS cited, in the small print. Saying this means they didn't read it.",
+        "A source is cited — it's in the small print under the chart. It names the neighbourhood log and the two months, which is the part that contradicts the headline.",
+      cues: [
+        "no source",
+        "doesnt cite",
+        "does not cite",
+        "no citation",
+        "where is the source",
+        "unsourced",
+        "no evidence",
+        "didnt say where",
+      ],
     },
     {
       claim: "300% is impossible",
       correction:
-        "It's arithmetically fine. Correct this; percentage illiteracy is part of what's being exploited.",
+        "It's arithmetically fine: 2 to 8 is four times as many, which is a 300% increase. The arithmetic isn't the problem — the choice to describe it that way is.",
+      cues: [
+        "300 is impossible",
+        "impossible",
+        "cant be 300",
+        "not possible",
+        "doesnt add up",
+        "maths is wrong",
+        "math is wrong",
+      ],
     },
   ],
 

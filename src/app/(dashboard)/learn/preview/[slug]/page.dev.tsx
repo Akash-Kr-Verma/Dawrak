@@ -20,8 +20,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ALL_MODULES, SEQUENCED } from "@/content/modules";
-import { ModuleRunner } from "@/components/modules/ModuleRunner";
-import type { RunnableModule } from "@/types/modules";
+import { ModuleRunner, type GradeRequest } from "@/components/modules/ModuleRunner";
+import {
+  decisiveSignalIds,
+  extractSignalsHeuristically,
+  gradeAttempt,
+  verdictMatches,
+} from "@/lib/modules/grade";
+import { assessReasoning } from "@/lib/modules/matchReasoning";
+import { composeFeedback } from "@/lib/modules/composeFeedback";
+import type { AuthoredModule, RunnableModule } from "@/types/modules";
 
 export default function ModulePreviewPage({
   params,
@@ -102,7 +110,77 @@ export default function ModulePreviewPage({
         ))}
       </nav>
 
-      <ModuleRunner key={mod.slug} module={mod} learnerFirstName="Aisha" />
+      <ModuleRunner
+        key={mod.slug}
+        module={mod}
+        learnerFirstName="Aisha"
+        gradeLocally={(req) => gradePreview(authored, req)}
+      />
     </div>
   );
+}
+
+/**
+ * The grading pipeline from /api/modules/grade, minus auth, the database, and
+ * the AI extraction step.
+ *
+ * The AI step only ever ADDS signal ids on top of the deterministic cue match,
+ * so what this shows is the floor — what a learner sees when no model is
+ * available, which is also what this deployment currently does, since no API
+ * key is configured. Nothing is persisted: this route has no user to attribute
+ * an attempt to.
+ */
+async function gradePreview(mod: AuthoredModule, req: GradeRequest) {
+  const reasoning = (req.learnerReasoning ?? "").trim();
+  const shape = assessReasoning(reasoning);
+  const behaviour = req.behaviouralLog ?? {};
+
+  const extraction =
+    shape.empty || shape.minimal
+      ? { signals_hit: [], distractors_hit: [], feedback: "", matches: [] }
+      : extractSignalsHeuristically(reasoning, mod.signals, mod.distractors);
+
+  const outcome = gradeAttempt({
+    moduleVerdict: mod.verdict,
+    learnerVerdict: req.learnerVerdict,
+    signals: mod.signals,
+    rubric: mod.rubric,
+    distractors: mod.distractors,
+    extraction,
+  });
+
+  const fired = (mod.call_script?.behaviouralOutcomes ?? []).filter(
+    (o) => (behaviour as Record<string, unknown>)[o.key]
+  );
+
+  const blocks = composeFeedback({
+    score: outcome.score,
+    verdictCorrect: verdictMatches(mod.verdict, req.learnerVerdict),
+    overFlagged: outcome.over_flagged,
+    signalsHit: outcome.signals_hit,
+    matches: extraction.matches,
+    signals: mod.signals,
+    missedSignal: outcome.missed_signal,
+    distractorsHit: outcome.corrections,
+    decisiveIds: decisiveSignalIds(mod.rubric),
+    frame: mod.rubric.feedback,
+    shape,
+    behaviour: fired,
+    hasBehaviour: Object.keys(behaviour).length > 0,
+  });
+
+  return {
+    score: outcome.score,
+    signals_hit: outcome.signals_hit,
+    advanced_reasoner: outcome.advanced_reasoner,
+    over_flagged: outcome.over_flagged,
+    dangerous_reasoning: outcome.dangerous_reasoning,
+    feedback: blocks.noticed,
+    blocks,
+    graded_by: "deterministic" as const,
+    missed_signal: outcome.missed_signal,
+    corrections: outcome.corrections,
+    canonical_reasoning: mod.canonical_reasoning,
+    reveal: mod.reveal,
+  };
 }
