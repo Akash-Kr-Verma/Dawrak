@@ -17,7 +17,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-lg py-2 px-4">
+    <nav className="fixed bottom-4 left-4 right-4 z-50 bg-white/80 backdrop-blur-md border border-white rounded-3xl shadow-xl shadow-indigo-500/10 py-2 px-4">
       <div className="max-w-md mx-auto flex justify-around items-center">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -27,18 +27,18 @@ export default function BottomNav() {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex flex-col items-center justify-center min-w-[64px] min-h-[48px] px-2 py-1 rounded-xl transition-colors ${
+              className={`flex flex-col items-center justify-center min-w-[64px] min-h-[48px] px-3 py-1.5 rounded-2xl transition-all duration-200 ${
                 isActive
-                  ? 'text-[#0F172A] font-bold'
-                  : 'text-slate-400 hover:text-slate-600'
+                  ? 'bg-[#7C3AED]/10 text-[#7C3AED] font-bold'
+                  : 'text-slate-400 hover:text-[#7C3AED] hover:bg-[#7C3AED]/5'
               }`}
             >
               <Icon
-                className={`w-6 h-6 mb-1 ${
-                  isActive ? 'text-[#0F172A] stroke-[2.5]' : 'stroke-2'
+                className={`w-5 h-5 mb-0.5 ${
+                  isActive ? 'text-[#7C3AED] stroke-[2.5]' : 'stroke-2'
                 }`}
               />
-              <span className="text-xs leading-none">{item.name}</span>
+              <span className="text-[10px] leading-none font-semibold">{item.name}</span>
             </Link>
           );
         })}

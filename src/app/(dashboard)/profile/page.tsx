@@ -16,6 +16,41 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+// Semi-circular progress arc SVG component
+function ProgressArc({ value, color, size = 80 }: { value: number; color: string; size?: number }) {
+  const radius = (size - 8) / 2;
+  const circumference = Math.PI * radius;
+  const dashOffset = circumference - (value / 100) * circumference;
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size / 2 + 8 }}>
+      <svg width={size} height={size / 2 + 8} viewBox={`0 0 ${size} ${size / 2 + 8}`}>
+        {/* Background arc */}
+        <path
+          d={`M 4 ${size / 2 + 4} A ${radius} ${radius} 0 0 1 ${size - 4} ${size / 2 + 4}`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="6"
+          strokeLinecap="round"
+          className="text-white/40"
+        />
+        {/* Progress arc */}
+        <path
+          d={`M 4 ${size / 2 + 4} A ${radius} ${radius} 0 0 1 ${size - 4} ${size / 2 + 4}`}
+          fill="none"
+          stroke={color}
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          style={{ transition: "stroke-dashoffset 1s ease-out" }}
+        />
+      </svg>
+      <span className="absolute bottom-0 text-sm font-black" style={{ color }}>{value}%</span>
+    </div>
+  );
+}
+
 interface AttemptStat {
   ai_score: number;
   scenario_category?: string;
@@ -83,7 +118,7 @@ export default function ProfilePage() {
   if (authLoading || loadingStats) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+        <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
       </div>
     );
   }
@@ -91,59 +126,61 @@ export default function ProfilePage() {
   return (
     <ProtectedRoute>
       <div className="max-w-4xl mx-auto space-y-6 pb-20">
-        {/* Profile Header & Logout */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-slate-900 text-emerald-400 font-black text-2xl flex items-center justify-center shadow-md">
-              {profile?.full_name?.charAt(0).toUpperCase() ||
-                user?.email?.charAt(0).toUpperCase() ||
-                "C"}
-            </div>
-            <div>
-              <h1 className="text-xl font-black text-slate-900">
-                {profile?.full_name || user?.email?.split("@")[0] || "New Changemaker"}
-              </h1>
-              <p className="text-xs text-slate-500 font-medium">{profile?.email || user?.email}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                  <CheckCircle2 className="w-3 h-3" /> Level {dynamicLevel}{" "}
-                  {dynamicLevel === 1 ? "Novice" : "Sentinel"}
-                </span>
+        {/* Profile Header — Gradient Card */}
+        <div className="bg-gradient-to-r from-[#7C3AED] to-[#FDA4AF] rounded-3xl p-6 shadow-xl shadow-indigo-500/10 text-white">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-white text-[#7C3AED] font-black text-2xl flex items-center justify-center shadow-lg ring-4 ring-white/30">
+                {profile?.full_name?.charAt(0).toUpperCase() ||
+                  user?.email?.charAt(0).toUpperCase() ||
+                  "C"}
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-tight">
+                  {profile?.full_name || user?.email?.split("@")[0] || "New Changemaker"}
+                </h1>
+                <p className="text-xs text-white/70 font-medium">{profile?.email || user?.email}</p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-[#A3E635] text-slate-900">
+                    <CheckCircle2 className="w-3 h-3" /> Level {dynamicLevel}{" "}
+                    {dynamicLevel === 1 ? "Novice" : "Sentinel"}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <span className="block text-[10px] text-slate-400 uppercase tracking-wider font-bold">Total Points</span>
-              <span className="text-xl font-black text-slate-900">{dynamicPoints} PTS</span>
+            <div className="flex items-center gap-3">
+              <div className="text-right bg-white/15 backdrop-blur-sm rounded-2xl px-4 py-2">
+                <span className="block text-[10px] text-white/60 uppercase tracking-wider font-bold">Total Points</span>
+                <span className="text-xl font-black">{dynamicPoints} PTS</span>
+              </div>
+              <button
+                onClick={async () => {
+                  await logout();
+                  router.push("/login");
+                }}
+                className="p-2.5 text-white/60 hover:text-white hover:bg-white/10 rounded-2xl transition-colors"
+                title="Log Out"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
             </div>
-            <button
-              onClick={async () => {
-                await logout();
-                router.push("/login");
-              }}
-              className="p-2.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-slate-200 transition-colors"
-              title="Log Out"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
           </div>
         </div>
 
         {/* Empty State */}
         {attempts.length === 0 && (
-          <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] text-white rounded-3xl p-6 shadow-lg shadow-indigo-500/15 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-center sm:text-left">
-              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#A3E635] uppercase tracking-wider">
                 <Sparkles className="w-4 h-4" />
                 <span>Zero Progress — Clean Slate</span>
               </div>
-              <h3 className="text-lg font-black">You haven't attempted any MIL Challenges yet!</h3>
-              <p className="text-xs text-slate-300">Complete your first reasoning evaluation to unlock analytics and start earning Level Badges.</p>
+              <h3 className="text-lg font-black">You haven&apos;t attempted any MIL Challenges yet!</h3>
+              <p className="text-xs text-indigo-200">Complete your first reasoning evaluation to unlock analytics and start earning Level Badges.</p>
             </div>
             <button
               onClick={() => router.push("/challenge")}
-              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl text-xs inline-flex items-center gap-2 shadow-sm"
+              className="px-5 py-3 bg-[#A3E635] hover:bg-[#84CC16] text-slate-900 font-black rounded-full text-xs inline-flex items-center gap-2 shadow-lg shadow-lime-500/20 btn-bouncy"
             >
               <span>Start First Challenge</span>
               <ArrowRight className="w-4 h-4" />
@@ -151,76 +188,78 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Analytics Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        {/* Analytics — Stacked Colorful Cards with Arcs */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-black text-slate-900">Media Literacy Skill Analytics</h2>
-              <p className="text-xs text-slate-500">Calculated dynamically from your PostgreSQL evaluation history.</p>
+              <h2 className="text-base font-black text-[#1E1B4B] tracking-tight">Media Literacy Skill Analytics</h2>
+              <p className="text-xs text-slate-500">Calculated dynamically from your evaluation history.</p>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-lg text-xs font-bold text-slate-700">
-              <TrendingUp className="w-4 h-4 text-emerald-600" />
-              <span>{avgLogicScore}% Avg Score</span>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-full text-xs font-bold text-[#7C3AED] shadow-sm">
+              <TrendingUp className="w-4 h-4 text-[#7C3AED]" />
+              <span>{avgLogicScore}% Avg</span>
             </div>
           </div>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
-                <span>Source & Lateral Verification</span>
-                <span className="text-emerald-700">{sourceCheckingScore}%</span>
+
+          {/* Stacked overlapping cards */}
+          <div className="relative space-y-[-8px]">
+            {/* Source Verification - Lavender */}
+            <div className="relative z-30 bg-[#EDE9FE] rounded-3xl p-5 shadow-lg shadow-indigo-500/5 flex items-center justify-between">
+              <div className="flex-1">
+                <h3 className="text-sm font-black text-[#5B21B6]">Source & Lateral Verification</h3>
+                <p className="text-[11px] text-[#7C3AED]/70 mt-0.5">Cross-reference & fact-check skills</p>
               </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${sourceCheckingScore}%` }}></div>
-              </div>
+              <ProgressArc value={sourceCheckingScore} color="#7C3AED" />
             </div>
-            <div>
-              <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
-                <span>Phishing & Scam Defense</span>
-                <span className="text-emerald-700">{phishingScore}%</span>
+
+            {/* Phishing - Coral */}
+            <div className="relative z-20 bg-[#FFE4E6] rounded-3xl p-5 shadow-lg shadow-rose-500/5 flex items-center justify-between ml-2">
+              <div className="flex-1">
+                <h3 className="text-sm font-black text-[#9F1239]">Phishing & Scam Defense</h3>
+                <p className="text-[11px] text-[#E11D48]/60 mt-0.5">Spotting fraudulent messages & links</p>
               </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${phishingScore}%` }}></div>
-              </div>
+              <ProgressArc value={phishingScore} color="#E11D48" />
             </div>
-            <div>
-              <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
-                <span>Deepfake & Audio Analysis</span>
-                <span className="text-amber-600">{deepfakeScore}%</span>
+
+            {/* Deepfake - Mint */}
+            <div className="relative z-10 bg-[#D1FAE5] rounded-3xl p-5 shadow-lg shadow-emerald-500/5 flex items-center justify-between ml-4">
+              <div className="flex-1">
+                <h3 className="text-sm font-black text-[#065F46]">Deepfake & Audio Analysis</h3>
+                <p className="text-[11px] text-emerald-700/60 mt-0.5">Identifying manipulated media</p>
               </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${deepfakeScore}%` }}></div>
-              </div>
-              {attempts.length === 0 ? (
-                <p className="text-[11px] text-slate-400 mt-1 italic font-medium">
-                  Skill bars will animate and fill up as you complete challenges.
-                </p>
-              ) : (
-                <p className="text-[11px] text-amber-700 mt-1 italic font-medium">
-                  Suggested focus area for your next Daily Challenge session.
-                </p>
-              )}
+              <ProgressArc value={deepfakeScore} color="#059669" />
             </div>
           </div>
+
+          {attempts.length === 0 ? (
+            <p className="text-[11px] text-slate-400 mt-2 italic font-medium text-center">
+              ✨ Skill arcs will fill up as you complete challenges.
+            </p>
+          ) : (
+            <p className="text-[11px] text-amber-700 mt-2 italic font-medium text-center bg-amber-50 rounded-full px-4 py-1.5">
+              🎯 Suggested focus area for your next Daily Challenge session.
+            </p>
+          )}
         </div>
 
         {/* Badges Section */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-          <h3 className="text-base font-black text-slate-900">Earned Sentinel Badges</h3>
+        <div className="bg-white rounded-3xl p-6 shadow-lg shadow-indigo-500/5 space-y-4">
+          <h3 className="text-base font-black text-[#1E1B4B]">Earned Sentinel Badges</h3>
           {attempts.length === 0 ? (
-            <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl space-y-2">
-              <Award className="w-8 h-8 text-slate-300 mx-auto" />
+            <div className="text-center py-8 border-2 border-dashed border-indigo-200 rounded-2xl space-y-2 bg-indigo-50/30">
+              <Award className="w-8 h-8 text-[#7C3AED]/30 mx-auto" />
               <p className="text-xs font-bold text-slate-500">No Badges Earned Yet</p>
-              <p className="text-[11px] text-slate-400">Complete 1 Challenge to unlock "First Responder"</p>
+              <p className="text-[11px] text-slate-400">Complete 1 Challenge to unlock &quot;First Responder&quot;</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0">
+              <div className="p-3.5 bg-gradient-to-br from-[#EDE9FE] to-[#F3E8FF] rounded-2xl flex items-center gap-3 shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-[#7C3AED] text-white flex items-center justify-center font-bold shrink-0 shadow-md">
                   <Award className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-emerald-950">First Responder</h4>
-                  <p className="text-[10px] text-emerald-800">Completed 1st MIL Challenge</p>
+                  <h4 className="text-xs font-bold text-[#5B21B6]">First Responder</h4>
+                  <p className="text-[10px] text-[#7C3AED]/70">Completed 1st MIL Challenge</p>
                 </div>
               </div>
             </div>

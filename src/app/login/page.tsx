@@ -4,7 +4,8 @@
 import React, { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { Shield, Mail, Lock, LogIn, UserPlus, Loader2, Award } from "lucide-react";
+import Image from "next/image";
+import { Shield, Mail, Lock, LogIn, UserPlus, Loader2, Award, Sparkles } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -93,14 +94,29 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-200 p-8 space-y-6">
+    <div className="min-h-screen bg-gradient-to-b from-[#EEF2FF] via-[#E0E7FF] to-[#C7D2FE] flex flex-col items-center justify-end sm:justify-center p-0 sm:p-4">
+      {/* Floating illustration area (top half on mobile) */}
+      <div className="flex-1 sm:flex-none flex flex-col items-center justify-center py-10 sm:py-0 sm:mb-8 animate-fade-up">
+        <div className="relative w-32 h-32 mb-4 animate-float bg-white rounded-3xl rounded-br-none shadow-xl shadow-indigo-500/20 p-2 flex items-center justify-center">
+          <Image
+            src="/asset/mascot-wave.png"
+            alt="Mascot Waving"
+            fill
+            className="object-contain p-2"
+          />
+        </div>
+        <div className="flex items-center gap-1.5 text-[#7C3AED]">
+          <Sparkles className="w-4 h-4" />
+          <span className="text-xs font-bold tracking-widest uppercase">Play Your Part</span>
+          <Sparkles className="w-4 h-4" />
+        </div>
+      </div>
+
+      {/* Bottom-sheet style card */}
+      <div className="w-full max-w-md bg-white rounded-t-[3rem] sm:rounded-3xl shadow-2xl shadow-indigo-500/10 p-8 space-y-6 animate-fade-up">
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 bg-slate-900 text-emerald-400 rounded-xl flex items-center justify-center mx-auto shadow-md">
-            <Shield className="w-6 h-6" />
-          </div>
-          <h1 className="text-2xl font-black text-slate-900">
+          <h1 className="text-2xl font-black text-[#1E1B4B] tracking-tight">
             {isSignUp ? "Create Changemaker Account" : "Welcome Back"}
           </h1>
           <p className="text-xs text-slate-500">
@@ -111,21 +127,25 @@ export default function LoginPage() {
         </div>
 
         {/* 1-Click Demo Login Banner (For Judges) */}
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center space-y-2">
-          <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-900 uppercase tracking-wider">
-            <Award className="w-4 h-4 text-emerald-600" />
+        <div className="bg-[#ECFCCB] border border-[#BEF264] rounded-2xl p-4 text-center space-y-3">
+          <div className="flex items-center justify-center gap-1.5 text-xs font-black text-[#365314] uppercase tracking-wider">
+            <Award className="w-4 h-4 text-[#65A30D]" />
             <span>Hackathon Judge Demo Access</span>
           </div>
-          <p className="text-xs text-emerald-800">
+          <p className="text-xs text-[#4D7C0F]">
             Skip registration and test immediately as a pre-loaded user.
           </p>
           <button
             type="button"
             onClick={handleDemoLogin}
             disabled={loading}
-            className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition-colors shadow-sm"
+            className="w-full py-3 px-4 bg-[#A3E635] hover:bg-[#84CC16] text-slate-900 font-black rounded-full text-sm transition-all shadow-md shadow-lime-500/20 btn-bouncy"
           >
-            1-Click Demo Sign-In
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+            ) : (
+              "⚡ 1-Click Demo Sign-In"
+            )}
           </button>
         </div>
 
@@ -140,37 +160,37 @@ export default function LoginPage() {
         {/* Auth Form */}
         <form onSubmit={handleAuth} className="space-y-4">
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700">Email Address</label>
+            <label className="text-xs font-bold text-[#1E1B4B]">Email Address</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              <Mail className="w-4 h-4 text-[#7C3AED]/50 absolute left-3.5 top-3.5" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                className="w-full pl-10 pr-4 py-3 border border-indigo-100 bg-indigo-50/30 rounded-2xl text-sm focus:ring-2 focus:ring-[#7C3AED]/30 focus:border-[#7C3AED]/30 focus:outline-none transition-all"
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700">Password</label>
+            <label className="text-xs font-bold text-[#1E1B4B]">Password</label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              <Lock className="w-4 h-4 text-[#7C3AED]/50 absolute left-3.5 top-3.5" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                className="w-full pl-10 pr-4 py-3 border border-indigo-100 bg-indigo-50/30 rounded-2xl text-sm focus:ring-2 focus:ring-[#7C3AED]/30 focus:border-[#7C3AED]/30 focus:outline-none transition-all"
               />
             </div>
           </div>
 
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-medium">
               {error}
             </div>
           )}
@@ -178,18 +198,18 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm transition-colors shadow-md flex items-center justify-center gap-2"
+            className="w-full py-3 bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold rounded-full text-sm transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 btn-bouncy"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : isSignUp ? (
               <>
-                <UserPlus className="w-4 h-4 text-emerald-400" />
+                <UserPlus className="w-4 h-4 text-[#A3E635]" />
                 <span>Sign Up & Get Started</span>
               </>
             ) : (
               <>
-                <LogIn className="w-4 h-4 text-emerald-400" />
+                <LogIn className="w-4 h-4 text-[#A3E635]" />
                 <span>Log In to Account</span>
               </>
             )}
@@ -204,7 +224,7 @@ export default function LoginPage() {
               setIsSignUp(!isSignUp);
               setError(null);
             }}
-            className="text-xs text-slate-600 hover:text-slate-900 font-medium underline"
+            className="text-xs text-[#7C3AED] hover:text-[#6D28D9] font-semibold underline underline-offset-2"
           >
             {isSignUp
               ? "Already have an account? Log In"

@@ -3,11 +3,74 @@
 @tailwind utilities;
 
 body {
-  color: #0F172A;
-  background-color: #F8FAFC;
+  color: #1E1B4B;
+  background-color: #EEF2FF;
 }
 
 /* Custom class for safe areas (useful for mobile safari/iOS wrappers) */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ---- Gamified UI Utilities ---- */
+
+/* Bouncy button press effect */
+.btn-bouncy {
+  @apply transition-all duration-150 active:scale-95;
+}
+
+/* Semi-circular progress arc container */
+.arc-container {
+  position: relative;
+  width: 80px;
+  height: 40px;
+  overflow: hidden;
+}
+
+.arc-container svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Ticket card notch effect */
+.ticket-notch::before,
+.ticket-notch::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: #EEF2FF;
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.ticket-notch::before {
+  left: -8px;
+}
+
+.ticket-notch::after {
+  right: -8px;
+}
+
+/* Glowing ring for avatar nodes */
+.glow-ring {
+  box-shadow:
+    0 0 0 4px rgba(124, 58, 237, 0.15),
+    0 0 20px rgba(124, 58, 237, 0.1);
+}
+
+/* Custom scrollbar for modals */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #C7D2FE;
+  border-radius: 4px;
 }

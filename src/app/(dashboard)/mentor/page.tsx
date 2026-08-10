@@ -14,12 +14,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { useMentorHub } from "@/hooks/useMentor";
 import { supabase } from "@/lib/supabase";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { chipLabel } from "@/types/mentor";
 import type { MentorableModule } from "@/types/mentor";
+import { KnowledgeTree } from "@/components/KnowledgeTree";
 import {
   Users,
   Share2,
@@ -177,7 +179,7 @@ export default function MentorHubPage() {
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+        <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
       </div>
     );
   }
@@ -189,9 +191,9 @@ export default function MentorHubPage() {
     <ProtectedRoute>
       <div className="max-w-5xl mx-auto space-y-6 pb-20">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-2xl font-black text-[#1E1B4B] tracking-tight">
               Mentor Hub &amp; Ripple Tree
             </h1>
             <p className="text-slate-500 text-sm mt-0.5">
@@ -200,27 +202,29 @@ export default function MentorHubPage() {
             </p>
           </div>
 
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-xs font-bold text-indigo-900">
-            <Sparkles className="w-4 h-4 text-indigo-600" />
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#EDE9FE] to-[#FCE7F3] rounded-full text-xs font-black text-[#7C3AED] shadow-sm">
+            <div className="relative w-4 h-4">
+              <Image src="/asset/stat-tree-growth.png" alt="Tree Growth" fill className="object-contain" />
+            </div>
             <span>Community Beacon ({reachCount} People Reached)</span>
           </div>
         </div>
 
         {error && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900">
             {error}
           </div>
         )}
 
         {/* ---- Pending Reviews ------------------------------------------ */}
         {pending.length > 0 && (
-          <section className="bg-white rounded-2xl border border-slate-200 border-t-4 border-t-indigo-500 p-6 shadow-sm">
+          <section className="bg-white rounded-3xl border border-[#7C3AED]/20 border-t-4 border-t-[#7C3AED] p-6 shadow-lg shadow-indigo-500/5">
             <div className="flex items-center justify-between mb-1">
-              <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-indigo-600" />
+              <h2 className="text-base font-black text-[#1E1B4B] flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-[#7C3AED]" />
                 Pending Reviews
               </h2>
-              <span className="bg-indigo-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
+              <span className="bg-[#7C3AED] text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold">
                 {pending.length}
               </span>
             </div>
@@ -233,14 +237,14 @@ export default function MentorHubPage() {
               {pending.map((p) => (
                 <div
                   key={p.id}
-                  className="border border-slate-200 rounded-xl p-4 bg-slate-50/60"
+                  className="border border-indigo-100 rounded-2xl p-4 bg-indigo-50/30"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-                      <Link2 className="w-3.5 h-3.5 text-emerald-700" />
+                    <div className="w-8 h-8 rounded-full bg-[#EDE9FE] border border-[#7C3AED]/20 flex items-center justify-center shrink-0">
+                      <Link2 className="w-3.5 h-3.5 text-[#7C3AED]" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 leading-tight">
+                      <p className="text-xs font-bold text-[#1E1B4B] leading-tight">
                         Someone from your shared link
                       </p>
                       <p className="text-[11px] text-slate-500 italic truncate">
@@ -273,14 +277,14 @@ export default function MentorHubPage() {
                       setReplyDrafts((d) => ({ ...d, [p.id]: e.target.value }))
                     }
                     placeholder="Reply in your own words — what did they get right, and what did they miss?"
-                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none mb-2"
+                    className="w-full p-2.5 border border-indigo-100 bg-white rounded-2xl text-xs focus:ring-2 focus:ring-[#7C3AED]/30 focus:outline-none mb-2"
                   />
                   <button
                     onClick={() => handleReply(p.id)}
                     disabled={
                       replyingTo === p.id || !(replyDrafts[p.id] ?? "").trim()
                     }
-                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
+                    className="px-4 py-1.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-full text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50 btn-bouncy"
                   >
                     {replyingTo === p.id ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -296,23 +300,23 @@ export default function MentorHubPage() {
         )}
 
         {/* ---- Share a module you've mastered ---------------------------- */}
-        <section className="bg-emerald-50/60 border-2 border-emerald-200 rounded-2xl p-6">
+        <section className="bg-gradient-to-br from-[#EDE9FE] to-[#FCE7F3] rounded-3xl p-6 shadow-lg shadow-indigo-500/5">
           <div className="flex items-center gap-2 mb-1">
-            <Users className="w-4 h-4 text-emerald-700" />
-            <h2 className="text-base font-black text-emerald-900">
+            <Users className="w-4 h-4 text-[#7C3AED]" />
+            <h2 className="text-base font-black text-[#5B21B6]">
               Share a situation you&apos;ve mastered
             </h2>
           </div>
-          <p className="text-xs text-slate-600 mb-4">
+          <p className="text-xs text-[#7C3AED]/70 mb-4">
             Pick something you&apos;ve already completed and send it to someone{" "}
-            <strong>outside Play Your Part</strong> — no account needed for them
+            <strong className="text-[#5B21B6]">outside Play Your Part</strong> — no account needed for them
             to open it. Their answer comes back to you here.
           </p>
 
           {mentorable.length === 0 ? (
-            <div className="bg-white border border-slate-200 rounded-xl p-5 text-center">
-              <Lock className="w-5 h-5 text-slate-400 mx-auto mb-2" />
-              <p className="text-xs font-bold text-slate-800 mb-1">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 text-center">
+              <Lock className="w-5 h-5 text-[#7C3AED]/40 mx-auto mb-2" />
+              <p className="text-xs font-bold text-[#1E1B4B] mb-1">
                 Nothing to mentor yet
               </p>
               <p className="text-[11px] text-slate-500">
@@ -325,24 +329,24 @@ export default function MentorHubPage() {
               {mentorable.map((m) => (
                 <div
                   key={m.module_id}
-                  className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center justify-between gap-3"
+                  className="relative bg-white p-4 rounded-2xl shadow-sm flex items-center justify-between gap-3 ticket-notch overflow-hidden"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <Check className="w-4 h-4 text-[#A3E635] shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 truncate">
+                      <p className="text-xs font-bold text-[#1E1B4B] truncate">
                         {m.title}
                       </p>
                       {m.active_share_token && (
-                        <p className="text-[10px] text-emerald-700 font-medium">
-                          Link active
+                        <p className="text-[10px] text-[#7C3AED] font-medium">
+                          Link active ✨
                         </p>
                       )}
                     </div>
                   </div>
                   <button
                     onClick={() => openShare(m)}
-                    className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shrink-0 inline-flex items-center gap-1.5"
+                    className="px-4 py-1.5 bg-[#A3E635] hover:bg-[#84CC16] text-slate-900 rounded-full text-xs font-black shrink-0 inline-flex items-center gap-1.5 shadow-sm btn-bouncy"
                   >
                     <Share2 className="w-3.5 h-3.5" />
                     Share
@@ -353,148 +357,68 @@ export default function MentorHubPage() {
           )}
         </section>
 
-        {/* ---- Tree + Nutrition Facts ------------------------------------ */}
+        {/* ---- Tree + Today's Stats ------------------------------------ */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between min-h-[420px]">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-slate-900" />
-                <h2 className="text-base font-black text-slate-900">
-                  Your Knowledge Tree
-                </h2>
-              </div>
-              <button
-                onClick={() => setShowProofModal(true)}
-                className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-sm"
-              >
-                <Camera className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Log Teaching Proof</span>
-              </button>
-            </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center py-8">
-              {learnersCount === 0 ? (
-                <div className="text-center max-w-sm space-y-3 px-4">
-                  <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100 shadow-sm">
-                    <UserPlus className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-base font-black text-slate-900">
-                    Your Tree is Waiting for Its First Seed
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Taught someone in person? Click{" "}
-                    <strong className="text-slate-800">
-                      &quot;Log Teaching Proof&quot;
-                    </strong>{" "}
-                    to record it and watch their branch grow.
-                  </p>
-                </div>
-              ) : (
-                <div className="w-full space-y-6">
-                  <div className="flex flex-col items-center">
-                    <div className="w-16 h-16 bg-slate-900 text-white font-black text-base rounded-full flex items-center justify-center shadow-lg ring-4 ring-emerald-100 z-10">
-                      You
-                    </div>
-                    <div className="w-0.5 h-6 bg-slate-300"></div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                    {sessions.map((node) => (
-                      <div
-                        key={node.id}
-                        className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/40 flex items-start gap-3 shadow-sm animate-in fade-in zoom-in duration-300"
-                      >
-                        {node.proof_file_url &&
-                        node.proof_file_url.startsWith("http") ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={node.proof_file_url}
-                            alt="Proof"
-                            className="w-12 h-12 rounded-lg object-cover border border-emerald-300 shrink-0"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center shrink-0 text-sm">
-                            {node.learner_name.charAt(0)}
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-1">
-                            <h4 className="text-xs font-bold text-slate-900 truncate">
-                              {node.learner_name}
-                            </h4>
-                            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-1.5 py-0.5 rounded">
-                              Verified
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                            {node.relationship}
-                          </p>
-                          {node.topic_taught && (
-                            <p className="text-[11px] text-emerald-900 font-medium truncate mt-1">
-                              📚 {node.topic_taught}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="pt-4 border-t border-slate-100">
-              <span className="text-xs text-slate-500 font-medium">
-                {learnersCount > 0
-                  ? `Your Ripple Tree has reached ${learnersCount} secondary learners.`
-                  : "Log an in-person session, or share a module link above."}
-              </span>
-            </div>
+          <div className="lg:col-span-2">
+            <KnowledgeTree 
+              learners={sessions.map(s => ({
+                id: s.id,
+                name: s.learner_name,
+                relation: s.relationship || "Community Member",
+                moduleName: s.topic_taught || "General Guidance",
+                isVerified: !!s.proof_file_url,
+              }))}
+              onLogProofClick={() => setShowProofModal(true)}
+            />
           </div>
 
-          {/* Nutrition Facts */}
-          <div className="bg-white rounded-2xl border-2 border-slate-900 p-6 shadow-sm space-y-4 self-start">
-            <div className="border-b-4 border-slate-900 pb-2">
-              <h2 className="text-2xl font-black tracking-tighter text-slate-900 uppercase">
-                NUTRITION FACTS
+          {/* Today's Stats — replaces harsh Nutrition Facts */}
+          <div className="bg-gradient-to-br from-indigo-50 to-[#FCE7F3] rounded-3xl p-6 shadow-lg shadow-indigo-500/5 space-y-4 self-start">
+            <div className="pb-2">
+              <h2 className="text-lg font-black tracking-tight text-[#1E1B4B]">
+                Today&apos;s Stats
               </h2>
-              <p className="text-xs font-bold text-slate-700">
-                Your Community Impact Diet
+              <p className="text-xs font-medium text-[#7C3AED]/70">
+                Your Community Impact
               </p>
             </div>
 
-            <div className="space-y-3 text-xs font-bold text-slate-900 divide-y divide-slate-200">
-              <div className="flex justify-between pt-1">
-                <span>Modules You Can Mentor</span>
-                <span className="text-emerald-700">
-                  {mentorable.length} of 10
-                </span>
+            {/* 2x2 mini-grid of pastel squares */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[#EDE9FE] rounded-2xl p-4 text-center">
+                <span className="text-2xl">✨</span>
+                <p className="text-2xl font-black text-[#5B21B6] mt-1">
+                  {mentorable.length}
+                </p>
+                <p className="text-[10px] font-bold text-[#7C3AED]/70 mt-0.5">Mentoring</p>
               </div>
 
-              <div className="flex justify-between pt-2">
-                <span>Verified Mentoring Proofs</span>
-                <span className="text-emerald-700">{learnersCount} Logged</span>
+              <div className="bg-[#D1FAE5] rounded-2xl p-4 text-center">
+                <span className="text-2xl">🌳</span>
+                <p className="text-2xl font-black text-[#065F46] mt-1">
+                  {learnersCount}
+                </p>
+                <p className="text-[10px] font-bold text-emerald-700/70 mt-0.5">Logged</p>
               </div>
 
-              <div className="flex justify-between pt-2">
-                <span>Replies Owed</span>
-                <span
-                  className={
-                    pending.length > 0 ? "text-amber-700" : "text-emerald-700"
-                  }
-                >
+              <div className="bg-[#FFE4E6] rounded-2xl p-4 text-center">
+                <span className="text-2xl">💬</span>
+                <p className="text-2xl font-black text-[#9F1239] mt-1">
                   {pending.length}
-                </span>
+                </p>
+                <p className="text-[10px] font-bold text-rose-700/70 mt-0.5">Replies Owed</p>
               </div>
 
-              <div className="flex justify-between pt-2">
-                <span>Ripple Tree Reach</span>
-                <span className="px-2 py-0.5 bg-slate-900 text-white rounded text-[10px]">
+              <div className="bg-[#E0F2FE] rounded-2xl p-4 text-center">
+                <span className="text-2xl">🔥</span>
+                <p className="text-2xl font-black text-[#0C4A6E] mt-1">
                   {reachCount === 0
                     ? "SEED"
                     : reachCount > 2
                     ? "FOREST"
-                    : "BRANCHING"}
-                </span>
+                    : "SPROUT"}
+                </p>
+                <p className="text-[10px] font-bold text-sky-700/70 mt-0.5">Tree Status</p>
               </div>
             </div>
           </div>
@@ -502,23 +426,23 @@ export default function MentorHubPage() {
 
         {/* ---- Log Teaching Proof modal ---------------------------------- */}
         {showProofModal && (
-          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-              <div className="bg-slate-900 text-white p-5 flex items-center justify-between shrink-0">
+          <div className="fixed inset-0 bg-[#1E1B4B]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-up">
+            <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl shadow-indigo-500/20 overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] text-white p-5 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
-                  <Camera className="w-5 h-5 text-emerald-400" />
+                  <Camera className="w-5 h-5 text-[#A3E635]" />
                   <div>
                     <h3 className="text-base font-black">
                       Verify Teaching Session
                     </h3>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-[11px] text-indigo-200">
                       Record an in-person session you ran.
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowProofModal(false)}
-                  className="text-slate-400 hover:text-white"
+                  className="text-indigo-200 hover:text-white transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -526,9 +450,9 @@ export default function MentorHubPage() {
 
               <form
                 onSubmit={handleSubmitProof}
-                className="p-6 space-y-4 overflow-y-auto flex-1"
+                className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar"
               >
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between">
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-amber-900 text-xs font-bold">
                     <Zap className="w-4 h-4 text-amber-600" />
                     <span>Hackathon Presenter Mode:</span>
@@ -536,7 +460,7 @@ export default function MentorHubPage() {
                   <button
                     type="button"
                     onClick={handleDemoQuickFill}
-                    className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors"
+                    className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-full text-xs font-bold transition-colors btn-bouncy"
                   >
                     Quick-Fill Sample Proof
                   </button>
@@ -544,7 +468,7 @@ export default function MentorHubPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1">
+                    <label className="block text-xs font-bold text-[#1E1B4B] mb-1">
                       Learner&apos;s Name *
                     </label>
                     <input
@@ -553,17 +477,17 @@ export default function MentorHubPage() {
                       value={learnerName}
                       onChange={(e) => setLearnerName(e.target.value)}
                       placeholder="e.g., Mom (Sunita), Alex"
-                      className="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                      className="w-full p-2.5 border border-indigo-100 bg-indigo-50/30 rounded-2xl text-xs focus:ring-2 focus:ring-[#7C3AED]/30 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1">
+                    <label className="block text-xs font-bold text-[#1E1B4B] mb-1">
                       Relationship
                     </label>
                     <select
                       value={relationship}
                       onChange={(e) => setRelationship(e.target.value)}
-                      className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                      className="w-full p-2.5 border border-indigo-100 bg-indigo-50/30 rounded-2xl text-xs bg-white focus:ring-2 focus:ring-[#7C3AED]/30 focus:outline-none"
                     >
                       <option>Mother / Father</option>
                       <option>Grandparent</option>
@@ -577,13 +501,13 @@ export default function MentorHubPage() {
                 {/* Optional module link. Free text stays available so a session
                     about something off-syllabus is still loggable. */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                  <label className="block text-xs font-bold text-[#1E1B4B] mb-1">
                     Which module? (optional)
                   </label>
                   <select
                     value={moduleId}
                     onChange={(e) => setModuleId(e.target.value)}
-                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                    className="w-full p-2.5 border border-indigo-100 bg-indigo-50/30 rounded-2xl text-xs bg-white focus:ring-2 focus:ring-[#7C3AED]/30 focus:outline-none"
                   >
                     <option value="">Not tied to a module</option>
                     {mentorable.map((m) => (
@@ -595,7 +519,7 @@ export default function MentorHubPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                  <label className="block text-xs font-bold text-[#1E1B4B] mb-1">
                     What Topic Did You Teach Them? *
                   </label>
                   <input
@@ -604,15 +528,15 @@ export default function MentorHubPage() {
                     value={topicTaught}
                     onChange={(e) => setTopicTaught(e.target.value)}
                     placeholder="e.g., Spotting WhatsApp Forwarded Phishing Links"
-                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                    className="w-full p-2.5 border border-indigo-100 bg-indigo-50/30 rounded-2xl text-xs focus:ring-2 focus:ring-[#7C3AED]/30 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                  <label className="block text-xs font-bold text-[#1E1B4B] mb-1">
                     Photo / Video Proof (Session Snapshot)
                   </label>
-                  <div className="border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-xl p-4 text-center cursor-pointer transition-colors relative bg-slate-50/50">
+                  <div className="border-2 border-dashed border-[#7C3AED]/20 hover:border-[#7C3AED]/40 rounded-2xl p-4 text-center cursor-pointer transition-colors relative bg-indigo-50/30">
                     <input
                       type="file"
                       accept="image/*,video/*"
@@ -625,18 +549,18 @@ export default function MentorHubPage() {
                         <img
                           src={proofPreview}
                           alt="Proof Preview"
-                          className="max-h-36 mx-auto rounded-lg object-cover border border-slate-300 shadow-sm"
+                          className="max-h-36 mx-auto rounded-2xl object-cover border border-indigo-200 shadow-sm"
                         />
-                        <p className="text-[11px] text-emerald-700 font-bold">
+                        <p className="text-[11px] text-[#7C3AED] font-bold">
                           ✓ Media attached • Click to replace
                         </p>
                       </div>
                     ) : (
                       <div className="space-y-1.5 py-2">
-                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-slate-200">
-                          <Upload className="w-5 h-5 text-slate-600" />
+                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-indigo-100">
+                          <Upload className="w-5 h-5 text-[#7C3AED]" />
                         </div>
-                        <p className="text-xs font-bold text-slate-700">
+                        <p className="text-xs font-bold text-[#1E1B4B]">
                           Click to upload Photo or Video
                         </p>
                         <p className="text-[10px] text-slate-400">
@@ -648,7 +572,7 @@ export default function MentorHubPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                  <label className="block text-xs font-bold text-[#1E1B4B] mb-1">
                     Brief Session Notes (Optional)
                   </label>
                   <textarea
@@ -656,14 +580,14 @@ export default function MentorHubPage() {
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="What did you check together?"
-                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                    className="w-full p-2.5 border border-indigo-100 bg-indigo-50/30 rounded-2xl text-xs focus:ring-2 focus:ring-[#7C3AED]/30 focus:outline-none"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={submittingProof || !learnerName.trim()}
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-3 bg-[#A3E635] hover:bg-[#84CC16] text-slate-900 font-black rounded-full text-xs shadow-md shadow-lime-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 btn-bouncy"
                 >
                   {submittingProof ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -681,28 +605,28 @@ export default function MentorHubPage() {
 
         {/* ---- Share link modal ------------------------------------------ */}
         {shareTarget && (
-          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="fixed inset-0 bg-[#1E1B4B]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-up">
+            <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl shadow-indigo-500/20 p-6 space-y-5">
+              <div className="flex items-center justify-between border-b border-indigo-100 pb-3">
                 <div className="flex items-center gap-2">
-                  <Share2 className="w-5 h-5 text-emerald-600" />
-                  <h3 className="text-base font-black text-slate-900">
+                  <Share2 className="w-5 h-5 text-[#7C3AED]" />
+                  <h3 className="text-base font-black text-[#1E1B4B]">
                     Share with someone new
                   </h3>
                 </div>
                 <button
                   onClick={() => setShareTarget(null)}
-                  className="text-slate-400 hover:text-slate-700"
+                  className="text-slate-400 hover:text-[#7C3AED] transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="bg-slate-50 rounded-xl p-3">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500 font-bold mb-1">
+              <div className="bg-indigo-50/50 rounded-2xl p-3">
+                <p className="text-[10px] uppercase tracking-wide text-[#7C3AED]/60 font-bold mb-1">
                   Situation
                 </p>
-                <p className="text-xs text-slate-800 font-medium">
+                <p className="text-xs text-[#1E1B4B] font-medium">
                   {shareTarget.title}
                 </p>
               </div>
@@ -710,31 +634,31 @@ export default function MentorHubPage() {
               <p className="text-xs text-slate-600 leading-relaxed">
                 Anyone can open this link without an account. They&apos;ll write
                 what they think and why — then it lands in your{" "}
-                <strong>Pending Reviews</strong>, and you reply personally. They
+                <strong className="text-[#7C3AED]">Pending Reviews</strong>, and you reply personally. They
                 are never shown the answer.
               </p>
 
               {shareBusy && (
                 <div className="flex justify-center py-3">
-                  <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" />
+                  <Loader2 className="w-5 h-5 text-[#7C3AED] animate-spin" />
                 </div>
               )}
 
               {shareError && (
-                <p className="text-xs text-rose-600">{shareError}</p>
+                <p className="text-xs text-[#E11D48]">{shareError}</p>
               )}
 
               {shareUrl && (
-                <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-2 bg-indigo-50/50 p-2.5 rounded-2xl border border-indigo-100">
                   <input
                     type="text"
                     readOnly
                     value={shareUrl}
-                    className="bg-transparent text-xs text-slate-700 font-mono w-full focus:outline-none"
+                    className="bg-transparent text-xs text-[#1E1B4B] font-mono w-full focus:outline-none"
                   />
                   <button
                     onClick={handleCopyLink}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shrink-0 transition-colors flex items-center gap-1"
+                    className="px-3 py-1.5 bg-[#7C3AED] hover:bg-[#6D28D9] text-white rounded-full text-xs font-bold shrink-0 transition-colors flex items-center gap-1 btn-bouncy"
                   >
                     {copied ? (
                       <>
