@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "seed:modules": "node scripts/generate-module-seed.mjs",
+    "seed:apply": "node scripts/apply-seed.mjs",
+    "seed:check": "node scripts/check-live-modules.mjs",
     "test:feedback": "node scripts/test-module-feedback.mjs",
     "test:modules": "node supabase/tests/module-system.test.mjs",
     "test:mentoring": "node supabase/tests/mentoring.test.mjs",
@@ -31,6 +33,7 @@
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
+    "pg": "^8.23.0",
     "postcss": "^8.4.45",
     "tailwindcss": "^3.4.10",
     "typescript": "^5.5.4"

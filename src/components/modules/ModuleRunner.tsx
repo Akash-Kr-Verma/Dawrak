@@ -272,11 +272,19 @@ export function ModuleRunner({
   // --- Judgement -----------------------------------------------------------
   if (stage === "judgement" || stage === "grading") {
     // Every module asks the same question with the same two buttons. Module 07
-    // used to relabel them (Accurate picture / Misleading) and Modules 06 and
-    // 09 had their own wording too; the content files now all carry Real/Fake,
-    // and the labels are read rather than hardcoded so a language pack can
-    // still translate them.
-    const labels = mod.verdict_labels ?? { positive: "Real", negative: "Fake" };
+    // used to relabel them (Accurate picture / Misleading), and Modules 06 and
+    // 09 had their own wording too.
+    //
+    // The label is read from the row, but NOT trusted: a database still on the
+    // previous seed hands back "Accurate picture" while the button now submits
+    // 'real', which would mark the correct answer wrong. Any pair that isn't
+    // the standardized one is replaced rather than rendered, so the judgement
+    // is correct whether or not the current seed has been applied yet.
+    const raw = mod.verdict_labels ?? { positive: "Real", negative: "Fake" };
+    const labels =
+      raw.positive === "Real" && raw.negative === "Fake"
+        ? raw
+        : { positive: "Real", negative: "Fake" };
     const positiveValue: LearnerVerdict = "real";
     const negativeValue: LearnerVerdict = "fake";
 
