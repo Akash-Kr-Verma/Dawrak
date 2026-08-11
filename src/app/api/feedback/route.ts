@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // src/app/api/feedback/route.ts
 //
 // Grades one Daily Challenge attempt and records it.
@@ -19,18 +21,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 
-export const dynamic = "force-dynamic";
-
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
 const AI_TIMEOUT_MS = 15_000;
 
-function getOpenAI(): OpenAI | null {
-  const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-  return new OpenAI({ apiKey, baseURL: "https://api.groq.com/openai/v1" });
-}
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -177,8 +172,9 @@ User's Reasoning:
     let gradedBy: "ai" | "fallback" = "ai";
 
     try {
-      const openai = getOpenAI();
-      if (!openai) throw new Error("No AI API key configured");
+      const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+      if (!apiKey) throw new Error("No AI API key configured");
+      const openai = new OpenAI({ apiKey, baseURL: "https://api.groq.com/openai/v1" });
 
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("AI request timeout")), AI_TIMEOUT_MS)
