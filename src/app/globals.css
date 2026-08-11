@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 body {
-  color: #1E1B4B;
-  background-color: #EEF2FF;
+  color: #6B7280; /* text.body */
+  background-color: #F5F6FF; /* background */
 }
 
 /* Custom class for safe areas (useful for mobile safari/iOS wrappers) */

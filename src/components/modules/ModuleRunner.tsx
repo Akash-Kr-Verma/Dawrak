@@ -223,7 +223,7 @@ export function ModuleRunner({
           <ScreenRenderer screen={screen} blocks={blocks} />
         </PhoneFrame>
         <ScreenDots total={screens.length} index={screenIndex} />
-        <div className="max-w-[380px] mx-auto">
+        <div className="w-full sm:max-w-[380px] mx-auto">
           <AdvanceButton
             label={
               isLastScreen

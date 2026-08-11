@@ -37,9 +37,9 @@ import {
   Zap,
   Link2,
   MessageSquare,
-  Send,
   Lock,
 } from "lucide-react";
+import { FloatingBackgroundDoodles } from "@/components/FloatingBackgroundDoodles";
 
 export default function MentorHubPage() {
   const { user, loading: authLoading } = useAuth();
@@ -189,7 +189,8 @@ export default function MentorHubPage() {
 
   return (
     <ProtectedRoute>
-      <div className="max-w-5xl mx-auto space-y-6 pb-20">
+      <div className="relative max-w-5xl mx-auto space-y-6 pb-20">
+        <FloatingBackgroundDoodles />
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
           <div>

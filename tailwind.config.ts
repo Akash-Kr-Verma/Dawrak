@@ -9,26 +9,35 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Play Your Part — Gamified Pastel Palette
+        // MILPill Design System
         primary: {
-          DEFAULT: "#7C3AED", // Electric Violet
+          DEFAULT: "#6D5DFB",
+          soft: "#EDEBFF",
           foreground: "#FFFFFF",
         },
-        secondary: {
-          DEFAULT: "#A3E635", // Pistachio Lime
-          foreground: "#1E1B4B",
+        success: {
+          DEFAULT: "#1F9254",
+          bg: "#E7F8ED",
         },
-        accent: {
-          DEFAULT: "#FDA4AF", // Soft Coral
-          foreground: "#1E1B4B",
+        info: {
+          DEFAULT: "#2569D6",
+          bg: "#E8F1FF",
         },
-        sky: {
-          accent: "#BAE6FD", // Sky Blue accent
+        warning: {
+          DEFAULT: "#E1503B",
+          bg: "#FFEBE9",
         },
-        background: "#EEF2FF", // Soft Periwinkle
-        foreground: "#1E1B4B", // Indigo-950
+        cta: {
+          DEFAULT: "#3FCB6B",
+        },
+        background: "#F5F6FF",
+        surface: "#FFFFFF",
+        text: {
+          heading: "#241B44",
+          body: "#6B7280",
+        },
         muted: {
-          DEFAULT: "#94A3B8",
+          DEFAULT: "#94A3B8", // Kept for any legacy usage
           foreground: "#1E1B4B",
         },
       },

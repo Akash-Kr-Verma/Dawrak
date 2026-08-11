@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Shield, Mail, Lock, LogIn, UserPlus, Loader2, Award, Sparkles } from "lucide-react";
+import { FloatingBackgroundDoodles } from "@/components/FloatingBackgroundDoodles";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,14 +30,15 @@ export default function LoginPage() {
         });
         if (signUpError) throw signUpError;
         alert("Account created! You are now logged in.");
+        router.push("/onboarding");
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (signInError) throw signInError;
+        router.push("/profile");
       }
-      router.push("/profile");
     } catch (err: any) {
       setError(err.message || "Authentication failed. Check credentials.");
     } finally {
@@ -48,7 +50,14 @@ export default function LoginPage() {
   const handleDemoLogin = async () => {
     setLoading(true);
     setError(null);
-    const demoEmail = "demo@playyourpart.org";
+    
+    // Generate a unique demo email per device so progress isn't shared/lost,
+    // and new judges get to experience the onboarding flow.
+    let demoEmail = localStorage.getItem('demo_email');
+    if (!demoEmail) {
+      demoEmail = `demo+${Date.now()}@milpill.org`;
+      localStorage.setItem('demo_email', demoEmail);
+    }
     const demoPassword = "HackathonDemoPassword2026!";
 
     try {
@@ -69,7 +78,7 @@ export default function LoginPage() {
 
         // Ensure we are signed in after signup
         if (signUpData.session) {
-          router.push("/profile");
+          router.push("/onboarding");
           return;
         }
       } else if (signInError) {
@@ -94,7 +103,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#EEF2FF] via-[#E0E7FF] to-[#C7D2FE] flex flex-col items-center justify-end sm:justify-center p-0 sm:p-4">
+    <div className="relative overflow-hidden min-h-screen bg-gradient-to-b from-[#EEF2FF] via-[#E0E7FF] to-[#C7D2FE] flex flex-col items-center justify-end sm:justify-center p-0 sm:p-4">
+      <FloatingBackgroundDoodles />
       {/* Floating illustration area (top half on mobile) */}
       <div className="flex-1 sm:flex-none flex flex-col items-center justify-center py-10 sm:py-0 sm:mb-8 animate-fade-up">
         <div className="relative w-32 h-32 mb-4 animate-float bg-white rounded-3xl rounded-br-none shadow-xl shadow-indigo-500/20 p-2 flex items-center justify-center">
@@ -107,7 +117,7 @@ export default function LoginPage() {
         </div>
         <div className="flex items-center gap-1.5 text-[#7C3AED]">
           <Sparkles className="w-4 h-4" />
-          <span className="text-xs font-bold tracking-widest uppercase">Play Your Part</span>
+          <span className="text-xs font-bold tracking-widest uppercase">MILPill</span>
           <Sparkles className="w-4 h-4" />
         </div>
       </div>

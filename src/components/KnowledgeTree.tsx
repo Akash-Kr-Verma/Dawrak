@@ -1,5 +1,6 @@
 import React, { useId } from 'react';
 import Image from 'next/image';
+import { Book, CheckCircle2 } from 'lucide-react';
 
 interface SecondaryLearner {
   id: string;
@@ -30,7 +31,7 @@ export const KnowledgeTree: React.FC<KnowledgeTreeProps> = ({ learners, onLogPro
   const filterId = useId();
 
   return (
-    <div className="relative w-full rounded-3xl bg-white p-6 shadow-xl shadow-indigo-950/5 border border-indigo-100/60">
+    <div className="relative w-full rounded-3xl bg-white p-6 shadow-xl shadow-indigo-950/5 border border-slate-100">
       {/* Header Bar */}
       <div className="flex items-center justify-between pb-6 border-b border-slate-100">
         <div className="flex items-center gap-3">
@@ -49,7 +50,7 @@ export const KnowledgeTree: React.FC<KnowledgeTreeProps> = ({ learners, onLogPro
 
         <button
           onClick={onLogProofClick}
-          className="flex items-center gap-2 rounded-full bg-[#7C3AED] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-purple-500/25 transition-all hover:bg-[#6D28D9] active:scale-95"
+          className="flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:bg-primary/90 active:scale-95"
         >
           <div className="relative h-5 w-5">
             <Image
@@ -67,17 +68,15 @@ export const KnowledgeTree: React.FC<KnowledgeTreeProps> = ({ learners, onLogPro
       <div className="relative mt-8 flex flex-col items-center">
         {/* Root Node: YOU */}
         <div className="relative z-10 flex flex-col items-center">
-          <div className="relative h-20 w-20 rounded-full p-1 bg-gradient-to-tr from-purple-500 to-pink-400 shadow-xl shadow-purple-500/20 animate-pulse">
-            <div className="relative h-full w-full overflow-hidden rounded-full bg-white">
-              <Image
-                src="/asset/avatar-you-node.png"
-                alt="You (Root)"
-                fill
-                className="object-cover p-1"
-              />
-            </div>
+          <div className="relative h-20 w-20 md:h-28 md:w-28 rounded-full border-[3px] border-slate-900 bg-blue-400 overflow-hidden shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] animate-pulse flex items-center justify-center transition-all">
+            <Image
+              src="/asset/avatar-you-node.png"
+              alt="You (Root)"
+              fill
+              className="object-cover p-1"
+            />
           </div>
-          <span className="mt-2 rounded-full bg-purple-100 px-3 py-1 text-xs font-black text-purple-700 uppercase tracking-wider">
+          <span className="mt-2 rounded-full bg-primary-soft px-3 py-1 text-xs font-black text-primary uppercase tracking-wider">
             You (Root)
           </span>
         </div>
@@ -87,8 +86,8 @@ export const KnowledgeTree: React.FC<KnowledgeTreeProps> = ({ learners, onLogPro
           <svg className="w-full h-16 overflow-visible pointer-events-none">
             <defs>
               <linearGradient id="branchGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#8B5CF6" />
-                <stop offset="100%" stopColor="#A3E635" />
+                <stop offset="0%" stopColor="#6D5DFB" />
+                <stop offset="100%" stopColor="#3FCB6B" />
               </linearGradient>
             </defs>
             {/* Center Trunk */}
@@ -106,9 +105,11 @@ export const KnowledgeTree: React.FC<KnowledgeTreeProps> = ({ learners, onLogPro
         </div>
 
         {/* Children Learner Cards Grid */}
-        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 z-10">
+        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-6 z-10">
           {learners.map((learner, index) => {
             const avatarSrc = getAvatarForRelation(learner.relation);
+            const bgColors = ['bg-yellow-400', 'bg-red-400', 'bg-green-400'];
+            const bgColor = bgColors[index % bgColors.length];
 
             return (
               <div
@@ -117,7 +118,7 @@ export const KnowledgeTree: React.FC<KnowledgeTreeProps> = ({ learners, onLogPro
                 style={{ animationDelay: `${index * 150}ms` }}
               >
                 {/* Dynamic PNG Avatar */}
-                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-purple-50 p-1 border border-purple-100 group-hover:scale-105 transition-transform">
+                <div className={`relative h-14 w-14 md:h-16 md:w-16 shrink-0 overflow-hidden rounded-full border-[3px] border-slate-900 ${bgColor} shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] group-hover:scale-105 transition-all flex items-center justify-center`}>
                   <Image
                     src={avatarSrc}
                     alt={learner.name}
@@ -133,16 +134,16 @@ export const KnowledgeTree: React.FC<KnowledgeTreeProps> = ({ learners, onLogPro
                       {learner.name}
                     </h4>
                     {learner.isVerified && (
-                      <span className="inline-flex items-center rounded-full bg-lime-100 px-2.5 py-0.5 text-xs font-bold text-lime-800">
-                        Verified ✓
+                      <span className="inline-flex items-center gap-1 rounded-full bg-success-bg px-2.5 py-0.5 text-xs font-bold text-success">
+                        <CheckCircle2 className="w-3 h-3" /> Verified
                       </span>
                     )}
                   </div>
                   <p className="text-xs font-medium text-slate-500 mt-0.5">
                     {learner.relation}
                   </p>
-                  <p className="mt-2 text-xs font-semibold text-purple-600 truncate flex items-center gap-1">
-                    <span>📚</span> {learner.moduleName}
+                  <p className="mt-2 text-xs font-semibold text-primary truncate flex items-center gap-1">
+                    <Book className="w-3.5 h-3.5" /> {learner.moduleName}
                   </p>
                 </div>
               </div>
@@ -155,7 +156,7 @@ export const KnowledgeTree: React.FC<KnowledgeTreeProps> = ({ learners, onLogPro
       <div className="mt-8 pt-4 border-t border-slate-100 text-center">
         <p className="text-sm font-bold text-slate-500">
           Your Ripple Tree has reached{' '}
-          <span className="text-purple-600 font-extrabold">{learners.length} secondary learners</span>.
+          <span className="text-primary font-extrabold">{learners.length} secondary learners</span>.
         </p>
       </div>
     </div>

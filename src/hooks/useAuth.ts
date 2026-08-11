@@ -7,7 +7,8 @@ import type { User } from "@supabase/supabase-js";
 
 export interface UserProfile {
   id: string;
-  full_name: string;
+  username: string | null;
+  full_name: string | null;
   total_points: number;
   level: number;
   email?: string;
@@ -33,6 +34,7 @@ export function useAuth() {
         // Fallback profile if RLS or row missing
         setProfile({
           id: userId,
+          username: null,
           full_name: email?.split("@")[0] || "MIL Changemaker",
           total_points: 0,
           level: 1,

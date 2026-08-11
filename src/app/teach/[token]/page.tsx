@@ -345,13 +345,13 @@ export default function TeachPage({ params }: { params: { token: string } }) {
           <div className="text-center bg-emerald-800 text-white rounded-2xl p-6">
             <p className="font-bold mb-1">Want to get better at spotting these?</p>
             <p className="text-sm text-white/80 mb-4">
-              Join Play Your Part — free, and you can start teaching others too.
+              Join MILPill — free, and you can start teaching others too.
             </p>
             <a
               href="/login"
               className="block bg-amber-400 text-amber-950 px-6 py-3 rounded-xl font-bold w-full"
             >
-              Join Play Your Part
+              Join MILPill
             </a>
           </div>
         </>
@@ -390,7 +390,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-2 mb-8 justify-center">
           <Users className="w-5 h-5 text-emerald-700" />
           <span className="font-bold text-emerald-800 tracking-tight">
-            Play Your Part
+            MILPill
           </span>
         </div>
         {children}

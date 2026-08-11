@@ -5,6 +5,7 @@ import { Profile } from '@/types/database';
 
 export const DEMO_PROFILE: Profile = {
   id: 'demo-user-id',
+  username: 'demo_user',
   full_name: 'Demo Changemaker',
   avatar_url: null,
   total_points: 0,

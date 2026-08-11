@@ -19,7 +19,7 @@ export function PhoneFrame({
   dark?: boolean;
 }) {
   return (
-    <div className="mx-auto w-full max-w-[380px]">
+    <div className="mx-auto w-full sm:max-w-[380px]">
       <div
         className={`rounded-[2rem] border-[10px] border-slate-900 overflow-hidden shadow-xl ${
           dark ? "bg-slate-950" : "bg-white"
@@ -112,7 +112,7 @@ export function Bubble({
   return (
     <div className={`flex ${outgoing ? "justify-end" : "justify-start"} px-3`}>
       <div
-        className={`max-w-[85%] rounded-[18px] px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
+        className={`max-w-[90%] sm:max-w-[85%] rounded-[18px] px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap ${
           outgoing
             ? "bg-emerald-600 text-white"
             : "bg-slate-100 text-slate-900 border border-slate-200"

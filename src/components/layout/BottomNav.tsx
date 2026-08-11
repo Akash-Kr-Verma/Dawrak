@@ -17,8 +17,8 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 z-50 bg-white/80 backdrop-blur-md border border-white rounded-3xl shadow-xl shadow-indigo-500/10 py-2 px-4">
-      <div className="max-w-md mx-auto flex justify-around items-center">
+    <nav className="fixed bottom-4 left-4 right-4 z-50 bg-white/80 backdrop-blur-md border border-white rounded-3xl shadow-xl shadow-indigo-500/10 py-2 px-4 md:top-0 md:bottom-auto md:left-0 md:right-0 md:rounded-none md:border-x-0 md:border-t-0 md:py-3 md:px-8 transition-all">
+      <div className="max-w-5xl mx-auto flex justify-around md:justify-center md:gap-8 items-center">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
@@ -27,18 +27,18 @@ export default function BottomNav() {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex flex-col items-center justify-center min-w-[64px] min-h-[48px] px-3 py-1.5 rounded-2xl transition-all duration-200 ${
+              className={`flex flex-col md:flex-row md:gap-2 items-center justify-center min-w-[64px] min-h-[44px] px-3 py-1.5 rounded-2xl transition-all duration-200 active:scale-95 ${
                 isActive
-                  ? 'bg-[#7C3AED]/10 text-[#7C3AED] font-bold'
-                  : 'text-slate-400 hover:text-[#7C3AED] hover:bg-[#7C3AED]/5'
+                  ? 'bg-primary-soft text-primary font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-primary hover:bg-primary-soft md:hover:shadow-sm'
               }`}
             >
               <Icon
-                className={`w-5 h-5 mb-0.5 ${
-                  isActive ? 'text-[#7C3AED] stroke-[2.5]' : 'stroke-2'
+                className={`w-5 h-5 mb-0.5 md:mb-0 ${
+                  isActive ? 'text-primary stroke-[2.5]' : 'stroke-2'
                 }`}
               />
-              <span className="text-[10px] leading-none font-semibold">{item.name}</span>
+              <span className="text-[10px] md:text-sm leading-none font-semibold">{item.name}</span>
             </Link>
           );
         })}

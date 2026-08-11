@@ -37,6 +37,7 @@ import {
   X,
   AlertTriangle,
 } from "lucide-react";
+import { FloatingBackgroundDoodles } from "@/components/FloatingBackgroundDoodles";
 
 export default function ChallengePage() {
   const { user, loading: authLoading } = useAuth();
@@ -113,14 +114,15 @@ export default function ChallengePage() {
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
     <ProtectedRoute>
-      <div className="max-w-3xl mx-auto space-y-6 pb-20">
+      <div className="relative max-w-3xl mx-auto space-y-6 pb-20">
+        <FloatingBackgroundDoodles />
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4">
           <div>
@@ -138,13 +140,13 @@ export default function ChallengePage() {
                 <div className="relative w-4 h-4">
                   <Image src="/asset/stat-streak-fire.png" alt="Streak Fire" fill className="object-contain" />
                 </div>
-                Day {streak} 🔥
+                Day {streak}
               </span>
             )}
             <button
               onClick={handleNext}
               disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-[#7C3AED] bg-white border border-indigo-200 rounded-full hover:bg-indigo-50 transition-all shadow-sm disabled:opacity-50 btn-bouncy"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-primary bg-white border border-primary-soft rounded-full hover:bg-primary-soft transition-all shadow-sm disabled:opacity-50 btn-bouncy"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
               New Claim
@@ -160,18 +162,18 @@ export default function ChallengePage() {
 
         {/* Scenario card */}
         {loading ? (
-          <div className="bg-white rounded-3xl p-12 shadow-lg shadow-indigo-500/5 text-center space-y-3">
-            <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin mx-auto" />
-            <p className="text-sm font-medium text-slate-600">
+          <div className="bg-surface rounded-2xl p-12 shadow-sm text-center space-y-3">
+            <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
+            <p className="text-sm font-medium text-text-body">
               Finding a situation for you...
             </p>
           </div>
         ) : scenario ? (
-          <div className="bg-white rounded-3xl shadow-lg shadow-indigo-500/5 overflow-hidden">
+          <div className="bg-surface rounded-2xl shadow-sm overflow-hidden border border-slate-100">
             {/* Floating badge header instead of dark bar */}
             <div className="px-5 pt-5 pb-3 flex flex-wrap items-center justify-between gap-2 text-xs font-medium">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#BAE6FD] text-[#0369A1] font-bold text-[11px] uppercase tracking-wider shadow-sm">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-info-bg text-info font-bold text-[11px] uppercase tracking-wider shadow-sm">
                   <Globe className="w-3 h-3" />
                   {scenario.source_channel || "Internet Claim"}
                 </span>
@@ -182,7 +184,7 @@ export default function ChallengePage() {
               </div>
 
               {scenario.viral_reach && (
-                <div className="flex items-center gap-1.5 text-[#7C3AED] font-bold bg-[#EDE9FE] px-3 py-1.5 rounded-full text-[11px]">
+                <div className="flex items-center gap-1.5 text-primary font-bold bg-primary-soft px-3 py-1.5 rounded-full text-[11px]">
                   <Share2 className="w-3 h-3" />
                   <span>{scenario.viral_reach}</span>
                 </div>
@@ -192,8 +194,8 @@ export default function ChallengePage() {
             {/* Questions Bank attribution — the prototype's "a mentor submitted
                 this and tagged it themselves; no AI checked it". */}
             {scenario.origin === "questions_bank" && (
-              <div className="bg-[#EDE9FE] mx-5 rounded-2xl px-4 py-2.5 flex items-center gap-2 text-xs text-[#5B21B6] mb-3">
-                <Users className="w-3.5 h-3.5 text-[#7C3AED] shrink-0" />
+              <div className="bg-primary-soft mx-5 rounded-2xl px-4 py-2.5 flex items-center gap-2 text-xs text-primary mb-3">
+                <Users className="w-3.5 h-3.5 text-primary shrink-0" />
                 <span>
                   Submitted to the Questions Bank by{" "}
                   <strong>{scenario.submitted_by_name}</strong> and tagged by
@@ -216,9 +218,9 @@ export default function ChallengePage() {
             )}
 
             {scenario.media_type === "audio" && scenario.media_url && (
-              <div className="bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] text-white mx-5 rounded-2xl p-5 mb-3 space-y-3">
-                <div className="flex items-center gap-2 text-indigo-200 text-xs font-bold uppercase tracking-wider">
-                  <Volume2 className="w-4 h-4 text-[#A3E635]" />
+              <div className="bg-primary text-white mx-5 rounded-2xl p-5 mb-3 space-y-3">
+                <div className="flex items-center gap-2 text-primary-soft text-xs font-bold uppercase tracking-wider">
+                  <Volume2 className="w-4 h-4 text-white" />
                   <span>Audio Evidence — Click Play to Listen</span>
                 </div>
                 <audio
