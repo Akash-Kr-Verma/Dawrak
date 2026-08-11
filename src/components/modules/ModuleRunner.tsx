@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ShieldAlert,
   BookOpen,
+  Users,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -367,7 +368,16 @@ export function ModuleRunner({
 
   // --- Feedback + reveal ---------------------------------------------------
   if (stage === "feedback" && result) {
-    return <FeedbackPanel module={mod} result={result} onFinished={onFinished} />;
+    return (
+      <FeedbackPanel
+        module={mod}
+        result={result}
+        onFinished={onFinished}
+        // The dev preview harness grades locally against imported content and
+        // writes no progress, so there is nothing to mentor from it.
+        canMentor={!gradeLocally}
+      />
+    );
   }
 
   return null;
@@ -407,10 +417,12 @@ function FeedbackPanel({
   module: mod,
   result,
   onFinished,
+  canMentor = false,
 }: {
   module: RunnableModule;
   result: GradeResponse;
   onFinished?: () => void;
+  canMentor?: boolean;
 }) {
   const [showReveal, setShowReveal] = React.useState(false);
   const [showFull, setShowFull] = React.useState(false);
@@ -575,6 +587,19 @@ function FeedbackPanel({
             </ul>
           )}
         </div>
+      )}
+
+      {/* Finishing a module is what makes it mentorable, so the offer to pass
+          it on belongs here rather than only in the Mentor Hub. The link opens
+          the Hub with this module's share dialog already up. */}
+      {canMentor && (
+        <a
+          href={`/mentor?share=${mod.slug}`}
+          className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2"
+        >
+          <Users className="w-4 h-4 text-emerald-400" />
+          Mentor this — send it to someone
+        </a>
       )}
 
       <button

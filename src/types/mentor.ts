@@ -4,7 +4,12 @@
 // completed, one module at a time — not "the Mentor Hub unlocks once you have
 // done enough". See supabase/migrations/0003_mentoring.sql.
 
-import type { ModuleFormat, ModuleGrade } from "@/types/modules";
+import type {
+  CallScript,
+  ModuleFormat,
+  ModuleGrade,
+  ModuleRenderSpec,
+} from "@/types/modules";
 
 /** A module the signed-in learner has completed, and may therefore share.
  *  Mirrors the `mentorable_modules` view. */
@@ -63,7 +68,17 @@ export interface PendingReview extends ShareResponse {
  *  Everything that would answer the question for them is withheld — no verdict,
  *  no signals, no rubric, no reveal, no canonical_reasoning. The recipient is
  *  being asked to judge; handing them the answer key would defeat the exercise
- *  and make the mentor's reply pointless. */
+ *  and make the mentor's reply pointless.
+ *
+ *  What IS here is the scenario itself: the same render_spec / content_blocks /
+ *  call_script an authenticated learner gets before judging (RUNNER_COLUMNS in
+ *  src/hooks/useModules.ts), so the recipient looks at the actual message,
+ *  portal or call rather than a paragraph describing it. See
+ *  supabase/migrations/0006_share_scenario.sql.
+ *
+ *  The scenario fields are optional because a database still on 0003 returns a
+ *  row without them; the share page falls back to the text-only presentation
+ *  rather than breaking. */
 export interface PublicShareLink {
   module_slug: string;
   module_title: string;
@@ -73,6 +88,13 @@ export interface PublicShareLink {
   content_warning: boolean;
   content_warning_text: string | null;
   mentor_name: string;
+
+  format?: ModuleFormat;
+  render_spec?: ModuleRenderSpec | null;
+  content_blocks?: Record<string, unknown> | null;
+  /** `behaviouralOutcomes` is stripped server-side — those are feedback lines,
+   *  and on this flow the feedback is the mentor's reply. */
+  call_script?: CallScript | null;
 }
 
 /** What `get_share_response` returns to the recipient holding the receipt. */

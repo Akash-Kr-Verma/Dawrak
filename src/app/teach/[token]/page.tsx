@@ -1,8 +1,21 @@
 // src/app/teach/[token]/page.tsx
 //
 // The public side of mentoring: someone with no account opens a link a mentor
-// sent them, judges the situation, and says why. Their answer goes to the
-// mentor, who replies personally.
+// sent them, judges the situation, says why, and gets a personal reply back.
+//
+// Laid out against share-view_3.html — the same four beats in the same order:
+//   "<name> wants to share something they learned with you"
+//   → the situation, presented like something you'd actually be forwarded
+//   → your call, then why you made it
+//   → waiting on a person, then their reply.
+//
+// The situation is the real thing, not a description of it. `get_share_link`
+// returns render_spec / content_blocks / call_script (0006_share_scenario.sql),
+// so the recipient walks the same screens — the SMS, the portal, the listing,
+// the call — that a signed-in learner walks. The engines are the same
+// components too; only what happens afterwards differs. A learner gets graded
+// feedback and the reveal. A recipient gets neither: their feedback is the
+// mentor's reply, written by hand, and that is the entire point of this flow.
 //
 // Deliberately outside the (dashboard) route group — no auth, no bottom nav,
 // no ProtectedRoute. The three RPCs it calls are the only database surface
@@ -18,9 +31,22 @@ import React, { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { REASON_CHIPS, chipLabel } from "@/types/mentor";
 import type { PublicShareLink, PublicShareResponse } from "@/types/mentor";
-import { Loader2, ShieldAlert, Users, Check } from "lucide-react";
+import { fillTokensDeep, resolvePack } from "@/content/languagePacks";
+import {
+  PhoneFrame,
+  ScreenDots,
+  AdvanceButton,
+  RichText,
+} from "@/components/modules/primitives";
+import { ScreenRenderer } from "@/components/modules/renderers";
+import { InteractiveCall } from "@/components/modules/InteractiveCall";
+import { PaymentActionFlow } from "@/components/modules/PaymentActionFlow";
+import { Loader2, ShieldAlert, Users, Check, Sparkles } from "lucide-react";
 
-type Step = "loading" | "gone" | "question" | "waiting" | "reply";
+// `scenario` is the walk through the actual screens; `question` is the judgement
+// that follows it. A link whose module row predates 0006_share_scenario.sql has
+// no screens to walk, and goes straight to `question` with the written prompt.
+type Step = "loading" | "gone" | "scenario" | "question" | "waiting" | "reply";
 
 const receiptKey = (token: string) => `pyp_share_receipt_${token}`;
 
@@ -30,6 +56,8 @@ export default function TeachPage({ params }: { params: { token: string } }) {
   const [step, setStep] = useState<Step>("loading");
   const [link, setLink] = useState<PublicShareLink | null>(null);
   const [warningAccepted, setWarningAccepted] = useState(false);
+
+  const [screenIndex, setScreenIndex] = useState(0);
 
   const [choice, setChoice] = useState<"positive" | "negative" | null>(null);
   const [chips, setChips] = useState<Set<string>>(new Set());
@@ -53,19 +81,24 @@ export default function TeachPage({ params }: { params: { token: string } }) {
         setStep("gone");
         return;
       }
-      setLink(row as PublicShareLink);
+      const shared = row as PublicShareLink;
+      setLink(shared);
 
       // Coming back to a link already answered on this device picks up where
-      // it left off rather than asking the same question twice.
-      const saved =
-        typeof window !== "undefined"
-          ? window.localStorage.getItem(receiptKey(token))
-          : null;
+      // it left off rather than asking the same question twice. localStorage
+      // can throw outright (Safari private browsing, storage disabled), and a
+      // recipient who cannot resume should still get the question.
+      let saved: string | null = null;
+      try {
+        saved = window.localStorage.getItem(receiptKey(token));
+      } catch {
+        saved = null;
+      }
       if (saved) {
         setReceipt(saved);
         setStep("waiting");
       } else {
-        setStep("question");
+        setStep(hasScenario(shared) ? "scenario" : "question");
       }
     })();
     return () => {
@@ -100,6 +133,23 @@ export default function TeachPage({ params }: { params: { token: string } }) {
     });
   };
 
+  // The scenario is authored with {{TOKENS}} — brand names, amounts, the
+  // learner's own first name. There is no account here to personalize from, so
+  // resolvePack's neutral fallback ("there") stands in. Resolved once, so every
+  // renderer downstream sees plain strings, exactly as ModuleRunner does it.
+  const tokens = React.useMemo(() => resolvePack("base"), []);
+  const scenario = React.useMemo(() => {
+    if (!link?.render_spec) return null;
+    return {
+      spec: fillTokensDeep(link.render_spec, tokens),
+      blocks: fillTokensDeep(
+        (link.content_blocks ?? {}) as Record<string, any>,
+        tokens
+      ),
+      call: link.call_script ? fillTokensDeep(link.call_script, tokens) : null,
+    };
+  }, [link, tokens]);
+
   const ready =
     choice !== null && (chips.size > 0 || reasonText.trim().length > 5);
 
@@ -131,7 +181,14 @@ export default function TeachPage({ params }: { params: { token: string } }) {
       if (error) throw new Error(error.message);
       const r = data as string;
       setReceipt(r);
-      window.localStorage.setItem(receiptKey(token), r);
+      // Losing the receipt costs the recipient the ability to come back to
+      // this link later — it does not cost them the submission, which is
+      // already stored. Never let it break the confirmation.
+      try {
+        window.localStorage.setItem(receiptKey(token), r);
+      } catch {
+        /* storage unavailable — the page stays live in this tab regardless */
+      }
       setStep("waiting");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e: any) {
@@ -145,8 +202,11 @@ export default function TeachPage({ params }: { params: { token: string } }) {
   if (step === "loading") {
     return (
       <Shell>
-        <div className="flex justify-center py-20">
+        <div className="flex flex-col items-center gap-3 py-24">
           <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            Opening what they sent you
+          </p>
         </div>
       </Shell>
     );
@@ -171,28 +231,53 @@ export default function TeachPage({ params }: { params: { token: string } }) {
     );
   }
 
+  const positiveLabel = link.verdict_labels?.positive ?? "Real";
+  const negativeLabel = link.verdict_labels?.negative ?? "Fake";
+  const questionText =
+    link.question_variant ??
+    `What do you think — ${negativeLabel.toLowerCase()} or ${positiveLabel.toLowerCase()}?`;
+
   const echo = [
-    choice === "positive"
-      ? link.verdict_labels?.positive ?? "Real"
-      : link.verdict_labels?.negative ?? "Fake",
+    choice === "positive" ? positiveLabel : negativeLabel,
     ...Array.from(chips).map(chipLabel),
   ].join(" · ");
 
+  // The warning gates the scenario, not just the question — it exists because
+  // of what the scenario itself does to you.
+  const gateOpen = !link.content_warning || warningAccepted;
+  const showWarning =
+    link.content_warning &&
+    !warningAccepted &&
+    (step === "scenario" || step === "question");
+  const showScenario = step === "scenario" && gateOpen && scenario !== null;
+  const showQuestion = step === "question" && gateOpen;
+
+  const screens = scenario?.spec.screens ?? [];
+  const screen = screens[screenIndex];
+  const isLastScreen = screenIndex >= screens.length - 1;
+
   return (
     <Shell>
+      {/* Who sent this, and why the reader is looking at it at all. */}
       <div className="text-center mb-8">
-        <div className="w-14 h-14 rounded-full bg-emerald-50 border-2 border-emerald-600 mx-auto mb-4 flex items-center justify-center">
-          <Users className="w-6 h-6 text-emerald-700" />
+        <div className="w-14 h-14 rounded-full bg-emerald-50 border-2 border-emerald-700 mx-auto mb-4 flex items-center justify-center text-emerald-800 font-black text-lg">
+          {initialOf(link.mentor_name)}
         </div>
-        <p className="text-slate-600 text-sm">
+        <p className="text-slate-600 text-sm leading-relaxed">
           <span className="font-bold text-slate-900">{link.mentor_name}</span>{" "}
           wants to share something they learned with you
         </p>
+        {step !== "reply" && (
+          <p className="text-[11px] text-slate-400 mt-2">
+            Takes a minute. There&apos;s no score and no right answer waiting to
+            catch you out.
+          </p>
+        )}
       </div>
 
       {/* Content warning, where the module carries one. Shown before the
           situation itself, and it has to be accepted to continue. */}
-      {link.content_warning && !warningAccepted && step === "question" && (
+      {showWarning && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-6 text-center space-y-3">
           <ShieldAlert className="w-6 h-6 text-amber-600 mx-auto" />
           <p className="text-sm text-amber-900">
@@ -208,42 +293,99 @@ export default function TeachPage({ params }: { params: { token: string } }) {
         </div>
       )}
 
-      {step === "question" && (!link.content_warning || warningAccepted) && (
+      {/* ---- The scenario itself -------------------------------------- */}
+      {showScenario && scenario && (
+        <div className="space-y-4">
+          {/* The call opens on its own lock screen and sets its own scene;
+              a framing card above it would break that. */}
+          {scenario.spec.engine !== "interactive_call" && (
+            <SituationCard
+              title={link.module_title}
+              prompt={link.prompt_text}
+            />
+          )}
+
+          {scenario.spec.engine === "interactive_call" && scenario.call && (
+            <PhoneFrame dark>
+              <InteractiveCall
+                script={scenario.call}
+                // The behavioural outcomes this returns are empty by design —
+                // `get_share_link` strips them, because on this flow the
+                // feedback is the mentor's, not the app's. What the recipient
+                // DID still shapes nothing here; what they SAY is the answer.
+                onComplete={() => setStep("question")}
+              />
+            </PhoneFrame>
+          )}
+
+          {scenario.spec.engine === "action_flow" && (
+            <PhoneFrame>
+              <PaymentActionFlow
+                blocks={scenario.blocks}
+                onComplete={() => setStep("question")}
+              />
+            </PhoneFrame>
+          )}
+
+          {scenario.spec.engine === "screen_sequence" && screen && (
+            <>
+              <PhoneFrame>
+                <ScreenRenderer screen={screen} blocks={scenario.blocks} />
+              </PhoneFrame>
+              <ScreenDots total={screens.length} index={screenIndex} />
+              <div className="max-w-[380px] mx-auto">
+                <AdvanceButton
+                  label={
+                    isLastScreen
+                      ? "I've seen enough — let me judge"
+                      : screen.advance?.label || "Continue"
+                  }
+                  onClick={() =>
+                    isLastScreen
+                      ? setStep("question")
+                      : setScreenIndex((i) => i + 1)
+                  }
+                />
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {showQuestion && (
         <>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-            <div className="p-4 border-b border-slate-100">
-              <p className="text-[10px] uppercase tracking-wide text-slate-500 font-bold">
-                Take a look at this
+          {/* Where the recipient walked the scenario, repeating the whole
+              framing card here would just push the buttons off the screen —
+              they were looking at it a second ago. Where there were no screens
+              to walk, this card IS the situation. */}
+          {scenario ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-5 py-4 mb-6">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">
+                What you just looked at
               </p>
-            </div>
-            <div className="p-6">
-              <h1 className="text-lg font-bold leading-snug mb-3 text-slate-900">
+              <p className="text-sm font-bold text-slate-900">
                 {link.module_title}
-              </h1>
-              <p className="text-slate-600 text-sm leading-relaxed">
-                {link.prompt_text}
               </p>
             </div>
-          </div>
+          ) : (
+            <SituationCard title={link.module_title} prompt={link.prompt_text} />
+          )}
 
           <p className="text-center font-bold mb-4 text-slate-900">
-            {link.question_variant ?? "What do you think?"}
+            {questionText}
           </p>
 
           <div className="grid grid-cols-2 gap-3 mb-6">
             {(["negative", "positive"] as const).map((side) => {
-              const label =
-                side === "positive"
-                  ? link.verdict_labels?.positive ?? "Real"
-                  : link.verdict_labels?.negative ?? "Fake";
+              const label = side === "positive" ? positiveLabel : negativeLabel;
               const selected = choice === side;
               return (
                 <button
                   key={side}
                   onClick={() => setChoice(side)}
-                  className={`border-2 py-3 rounded-xl font-bold text-sm transition-colors ${
+                  className={`border-2 py-3.5 rounded-xl font-bold text-sm transition-colors ${
                     selected
-                      ? "bg-emerald-700 text-white border-emerald-700"
+                      ? "bg-emerald-700 text-white border-emerald-700 shadow-sm"
                       : "border-emerald-700 text-emerald-800 hover:bg-emerald-50"
                   }`}
                 >
@@ -254,9 +396,13 @@ export default function TeachPage({ params }: { params: { token: string } }) {
           </div>
 
           {choice && (
-            <div className="animate-in fade-in duration-200">
-              <p className="font-bold mb-2 text-slate-900 text-sm">
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <p className="font-bold mb-1 text-slate-900 text-sm">
                 What made you think that?
+              </p>
+              <p className="text-[11px] text-slate-500 mb-3">
+                Pick what applies, or write it yourself — this is the part{" "}
+                {link.mentor_name} actually reads.
               </p>
               <div className="flex flex-wrap gap-2 mb-3">
                 {REASON_CHIPS.map((c) => (
@@ -278,7 +424,7 @@ export default function TeachPage({ params }: { params: { token: string } }) {
                 onChange={(e) => setReasonText(e.target.value)}
                 maxLength={2000}
                 placeholder="Say it in your own words too, if you want..."
-                className="w-full min-h-[80px] p-4 rounded-xl border-2 border-slate-200 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                className="w-full min-h-[90px] p-4 rounded-xl border-2 border-slate-200 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
               {submitError && (
                 <p className="text-xs text-rose-600 mb-3">{submitError}</p>
@@ -286,7 +432,7 @@ export default function TeachPage({ params }: { params: { token: string } }) {
               <button
                 onClick={handleSubmit}
                 disabled={!ready || submitting}
-                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3.5 rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                 Send to {link.mentor_name}
@@ -302,7 +448,15 @@ export default function TeachPage({ params }: { params: { token: string } }) {
 
       {step === "waiting" && (
         <>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-3 mb-4 flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-700 shrink-0" />
+            <p className="text-xs font-bold text-emerald-900">
+              Sent to {link.mentor_name}
+            </p>
+          </div>
+
           <SentCard text={answer ? formatAnswer(answer) : echo} />
+
           <div className="bg-slate-50 rounded-2xl p-8 text-center border border-slate-200">
             <div className="flex justify-center gap-1 mb-4">
               {[0, 1, 2].map((i) => (
@@ -316,12 +470,16 @@ export default function TeachPage({ params }: { params: { token: string } }) {
             <p className="font-bold mb-1 text-slate-900">
               {link.mentor_name} is reading your answer
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 leading-relaxed">
               They reply personally — no bot, no automatic answer key. This page
-              updates itself, so you can leave it open or come back to the link
-              later.
+              updates itself, so you can leave it open or come back to the same
+              link later.
             </p>
           </div>
+
+          <p className="text-[11px] text-slate-400 text-center mt-4">
+            Keep this link — it&apos;s where their reply will show up.
+          </p>
         </>
       )}
 
@@ -343,13 +501,14 @@ export default function TeachPage({ params }: { params: { token: string } }) {
           </div>
 
           <div className="text-center bg-emerald-800 text-white rounded-2xl p-6">
+            <Sparkles className="w-5 h-5 mx-auto mb-2 text-amber-300" />
             <p className="font-bold mb-1">Want to get better at spotting these?</p>
             <p className="text-sm text-white/80 mb-4">
               Join Play Your Part — free, and you can start teaching others too.
             </p>
             <a
               href="/login"
-              className="block bg-amber-400 text-amber-950 px-6 py-3 rounded-xl font-bold w-full"
+              className="block bg-amber-400 hover:bg-amber-300 text-amber-950 px-6 py-3 rounded-xl font-bold w-full transition-colors"
             >
               Join Play Your Part
             </a>
@@ -358,6 +517,45 @@ export default function TeachPage({ params }: { params: { token: string } }) {
       )}
     </Shell>
   );
+}
+
+/** True once the link carries the module's screens. False against a database
+ *  still on 0003, where the page falls back to prompt text alone. */
+function hasScenario(link: PublicShareLink): boolean {
+  const spec = link.render_spec;
+  if (!spec?.engine) return false;
+  if (spec.engine === "interactive_call") return !!link.call_script;
+  if (spec.engine === "screen_sequence") return (spec.screens ?? []).length > 0;
+  return true;
+}
+
+/** The situation framed like something you were forwarded, not like a quiz
+ *  question. Carries the module's authored emphasis — `prompt_text` uses
+ *  **bold** and the asterisks must not reach the reader. */
+function SituationCard({ title, prompt }: { title: string; prompt: string }) {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+      <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+        <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+          Take a look at this
+        </p>
+      </div>
+      <div className="p-6">
+        <h1 className="text-xl font-black leading-snug mb-3 text-slate-900">
+          {title}
+        </h1>
+        <RichText
+          text={prompt}
+          className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap block"
+        />
+      </div>
+    </div>
+  );
+}
+
+function initialOf(name: string | null | undefined): string {
+  const trimmed = (name ?? "").trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : "?";
 }
 
 function formatAnswer(a: PublicShareResponse): string {
@@ -378,7 +576,7 @@ function SentCard({ text }: { text: string }) {
       <p className="text-[10px] uppercase tracking-wide text-slate-500 font-bold mb-2">
         What you sent
       </p>
-      <p className="text-sm text-slate-700">{text || "—"}</p>
+      <p className="text-sm text-slate-700 leading-relaxed">{text || "—"}</p>
     </div>
   );
 }
