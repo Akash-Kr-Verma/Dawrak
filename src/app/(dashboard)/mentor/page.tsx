@@ -38,6 +38,7 @@ import {
   Link2,
   MessageSquare,
   Lock,
+  Send,
 } from "lucide-react";
 import { FloatingBackgroundDoodles } from "@/components/FloatingBackgroundDoodles";
 
