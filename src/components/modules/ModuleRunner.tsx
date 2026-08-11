@@ -190,32 +190,32 @@ export function ModuleRunner({
   // of care. Skipping must not penalize progress or mentor eligibility.
   if (stage === "warning") {
     return (
-      <div className="max-w-md mx-auto bg-white rounded-2xl border border-amber-200 p-6 space-y-4">
-        <div className="flex items-center gap-2 text-amber-700">
+      <div className="max-w-md mx-auto bg-surface rounded-2xl border border-spark-100 p-6 space-y-4">
+        <div className="flex items-center gap-2 text-spark-700">
           <AlertTriangle className="w-5 h-5" />
           <span className="text-xs font-black uppercase tracking-wider">
             Before you start
           </span>
         </div>
-        <p className="text-sm text-slate-800 leading-relaxed">
+        <p className="text-sm text-ink-soft leading-relaxed">
           {mod.content_warning_text}
         </p>
         <div className="flex flex-col sm:flex-row gap-2 pt-2">
           <button
             onClick={() => setStage("content")}
-            className="flex-1 py-3 bg-slate-900 text-white text-xs font-bold rounded-xl"
+            className="flex-1 py-3 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl btn-press"
           >
             Continue
           </button>
           <button
             onClick={handleSkip}
-            className="flex-1 py-3 border border-slate-300 text-slate-700 text-xs font-bold rounded-xl"
+            className="flex-1 py-3 border-2 border-line text-ink-soft text-xs font-bold rounded-xl btn-press"
           >
             Skip this module
           </button>
         </div>
         {mod.skippable_without_penalty && (
-          <p className="text-[11px] text-slate-500 text-center">
+          <p className="text-[11px] text-ink-muted text-center">
             Skipping won&apos;t affect your progress or mentor eligibility.
           </p>
         )}
@@ -298,9 +298,9 @@ export function ModuleRunner({
             fast"), and printing them above the Real/Fake buttons handed over
             the answer before the judgement was made. They now appear in the
             feedback, where they belong. */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-5">
+        <div className="bg-surface rounded-2xl border border-line shadow-card p-5 space-y-5">
           <div className="space-y-3">
-            <label className="block text-sm font-bold text-slate-900">
+            <label className="block text-sm font-bold text-ink">
               {mod.question_variant || "What's your call?"}
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -309,11 +309,11 @@ export function ModuleRunner({
                 onClick={() => setVerdict(positiveValue)}
                 className={`p-3.5 rounded-xl border text-xs font-bold flex flex-col items-center gap-2 transition-all ${
                   verdict === positiveValue
-                    ? "bg-emerald-50 border-emerald-500 text-emerald-700 ring-2 ring-emerald-500/20"
-                    : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                    ? "bg-success-50 border-success-600 text-success-800 ring-4 ring-success-100"
+                    : "border-line hover:border-line-strong text-ink-soft"
                 }`}
               >
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <CheckCircle2 className="w-5 h-5 text-success-600" />
                 <span>{labels.positive}</span>
               </button>
               <button
@@ -321,21 +321,21 @@ export function ModuleRunner({
                 onClick={() => setVerdict(negativeValue)}
                 className={`p-3.5 rounded-xl border text-xs font-bold flex flex-col items-center gap-2 transition-all ${
                   verdict === negativeValue
-                    ? "bg-rose-50 border-rose-500 text-rose-700 ring-2 ring-rose-500/20"
-                    : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                    ? "bg-danger-50 border-danger-600 text-danger-700 ring-4 ring-danger-100"
+                    : "border-line hover:border-line-strong text-ink-soft"
                 }`}
               >
-                <ShieldAlert className="w-5 h-5 text-rose-600" />
+                <ShieldAlert className="w-5 h-5 text-danger-600" />
                 <span>{labels.negative}</span>
               </button>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-bold text-slate-900">
+            <label className="block text-sm font-bold text-ink">
               How do you know?
             </label>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-ink-muted">
               Name the specific things in what you just saw. Your own words are fine.
             </p>
             <textarea
@@ -343,12 +343,12 @@ export function ModuleRunner({
               value={reasoning}
               onChange={(e) => setReasoning(e.target.value)}
               placeholder="What made you decide?"
-              className="w-full p-3.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900 focus:outline-none text-sm text-slate-900"
+              className="w-full p-3.5 border-2 border-line rounded-xl focus:border-brand-600 focus:outline-none text-sm text-ink bg-surface transition-colors"
             />
           </div>
 
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">
+            <div className="p-3 bg-danger-50 border border-danger-100 rounded-xl text-xs text-danger-700 font-medium">
               {error}
             </div>
           )}
@@ -357,7 +357,7 @@ export function ModuleRunner({
           <button
             onClick={handleSubmit}
             disabled={busy || !verdict || reasoning.trim().length < 10}
-            className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold rounded-xl text-sm"
+            className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm btn-press"
           >
             {busy ? "Checking your reasoning…" : "Submit"}
           </button>
@@ -387,7 +387,7 @@ export function ModuleRunner({
 
 function PromptCard({ text }: { text: string }) {
   return (
-    <div className="max-w-xl mx-auto bg-slate-900 text-white rounded-2xl p-5">
+    <div className="max-w-xl mx-auto bg-ink text-white rounded-2xl p-5">
       <p className="text-sm leading-relaxed whitespace-pre-wrap">
         <RichText text={text} />
       </p>
@@ -396,9 +396,9 @@ function PromptCard({ text }: { text: string }) {
 }
 
 const SCORE_STYLE: Record<string, { label: string; cls: string }> = {
-  accept: { label: "Strong reasoning", cls: "bg-emerald-50 border-emerald-200 text-emerald-900" },
-  partial: { label: "Partly there", cls: "bg-amber-50 border-amber-200 text-amber-900" },
-  reject: { label: "Let's look again", cls: "bg-slate-50 border-slate-200 text-slate-900" },
+  accept: { label: "Strong reasoning", cls: "bg-success-50 border-success-100 text-success-800" },
+  partial: { label: "Partly there", cls: "bg-spark-50 border-spark-100 text-spark-700" },
+  reject: { label: "Let's look again", cls: "bg-surface-sunken border-line text-ink" },
 };
 
 /**
@@ -455,13 +455,13 @@ function FeedbackPanel({
         <div
           className={`rounded-2xl border p-4 space-y-1.5 ${
             result.dangerous_reasoning
-              ? "border-rose-300 bg-rose-50"
-              : "border-amber-200 bg-amber-50"
+              ? "border-danger-100 bg-danger-50"
+              : "border-spark-100 bg-spark-50"
           }`}
         >
           <div
             className={`flex items-center gap-1.5 ${
-              result.dangerous_reasoning ? "text-rose-800" : "text-amber-800"
+              result.dangerous_reasoning ? "text-danger-700" : "text-spark-700"
             }`}
           >
             <AlertTriangle className="w-4 h-4" />
@@ -473,7 +473,7 @@ function FeedbackPanel({
             <p
               key={i}
               className={`text-sm leading-relaxed ${
-                result.dangerous_reasoning ? "text-rose-900" : "text-amber-900"
+                result.dangerous_reasoning ? "text-danger-700" : "text-spark-700"
               }`}
             >
               {c}
@@ -484,11 +484,11 @@ function FeedbackPanel({
 
       {/* 2 — The one piece of evidence that settles it. */}
       {blocks?.strongest && (
-        <div className="bg-white rounded-2xl border-2 border-slate-900 p-5 space-y-2">
-          <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+        <div className="bg-surface rounded-2xl border-2 border-brand-600 p-5 space-y-2">
+          <span className="text-[11px] font-black uppercase tracking-wider text-ink-muted">
             Strongest clue
           </span>
-          <p className="text-sm text-slate-900 leading-relaxed">
+          <p className="text-sm text-ink leading-relaxed">
             <RichText text={blocks.strongest} />
           </p>
         </div>
@@ -496,14 +496,14 @@ function FeedbackPanel({
 
       {/* 3 — Everything else, short. */}
       {blocks?.others?.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2.5">
-          <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+        <div className="bg-surface rounded-2xl border border-line p-5 space-y-2.5">
+          <span className="text-[11px] font-black uppercase tracking-wider text-ink-muted">
             Other signals
           </span>
           <ul className="space-y-2">
             {blocks.others.map((o, i) => (
-              <li key={i} className="flex gap-2.5 text-sm text-slate-800 leading-relaxed">
-                <span className="text-slate-400 shrink-0" aria-hidden>
+              <li key={i} className="flex gap-2.5 text-sm text-ink-soft leading-relaxed">
+                <span className="text-ink-faint shrink-0" aria-hidden>
                   —
                 </span>
                 <span>
@@ -517,8 +517,8 @@ function FeedbackPanel({
 
       {/* 4 — The one line worth keeping. */}
       {blocks?.takeaway && (
-        <div className="bg-slate-900 text-white rounded-2xl p-5 space-y-2">
-          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+        <div className="bg-ink text-white rounded-2xl p-5 space-y-2">
+          <span className="text-[11px] font-black uppercase tracking-wider text-white/60">
             Takeaway
           </span>
           <p className="text-sm leading-relaxed">
@@ -531,26 +531,26 @@ function FeedbackPanel({
           default: it is the long version of everything above, and a learner who
           wants it should have it — without it being the wall of text that
           arrives the second they finish. */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div className="bg-surface rounded-2xl border border-line overflow-hidden">
         <button
           onClick={() => setShowFull((v) => !v)}
           aria-expanded={showFull}
           className="w-full px-5 py-4 flex items-center justify-between gap-3 text-left"
         >
-          <span className="flex items-center gap-2 text-slate-700">
+          <span className="flex items-center gap-2 text-ink-soft">
             <BookOpen className="w-4 h-4 shrink-0" />
             <span className="text-[11px] font-black uppercase tracking-wider">
               The full breakdown
             </span>
           </span>
           <ChevronDown
-            className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${
+            className={`w-4 h-4 text-ink-muted shrink-0 transition-transform ${
               showFull ? "rotate-180" : ""
             }`}
           />
         </button>
         {showFull && (
-          <div className="px-5 pb-5 text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+          <div className="px-5 pb-5 text-sm text-ink-soft leading-relaxed whitespace-pre-wrap">
             <RichText text={result.canonical_reasoning} />
           </div>
         )}
@@ -559,26 +559,26 @@ function FeedbackPanel({
       {!showReveal ? (
         <button
           onClick={() => setShowReveal(true)}
-          className="w-full py-3 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-2"
+          className="w-full py-3 border-2 border-line rounded-xl text-xs font-bold text-ink-soft btn-press flex items-center justify-center gap-2"
         >
           Show the real case behind this
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       ) : (
-        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 space-y-2">
-          <h4 className="text-sm font-black text-indigo-950">
+        <div className="bg-mentor-50 border border-mentor-100 rounded-2xl p-5 space-y-2">
+          <h4 className="text-sm font-black text-mentor-800">
             {result.reveal?.headline}
           </h4>
-          <p className="text-sm text-indigo-900 leading-relaxed whitespace-pre-wrap">
+          <p className="text-sm text-mentor-800 leading-relaxed whitespace-pre-wrap">
             {result.reveal?.body}
           </p>
           {result.reveal?.localizationNote && (
-            <p className="text-xs text-indigo-800 pt-1">
+            <p className="text-xs text-mentor-700 pt-1">
               {result.reveal.localizationNote}
             </p>
           )}
           {result.reveal?.sourceLinks && result.reveal.sourceLinks.length > 0 && (
-            <ul className="text-[11px] text-indigo-700 pt-1 space-y-0.5">
+            <ul className="text-[11px] text-mentor-700 pt-1 space-y-0.5">
               {result.reveal.sourceLinks.map((l) => (
                 <li key={l} className="truncate">
                   {l}
@@ -595,16 +595,16 @@ function FeedbackPanel({
       {canMentor && (
         <a
           href={`/mentor?share=${mod.slug}`}
-          className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2"
+          className="w-full py-3.5 bg-mentor-600 hover:bg-mentor-700 text-white font-bold rounded-xl text-sm btn-press flex items-center justify-center gap-2"
         >
-          <Users className="w-4 h-4 text-emerald-400" />
+          <Users className="w-4 h-4" />
           Mentor this — send it to someone
         </a>
       )}
 
       <button
         onClick={onFinished}
-        className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm"
+        className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm btn-press"
       >
         Back to modules
       </button>

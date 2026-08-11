@@ -1,6 +1,9 @@
 export interface Profile {
   id: string;
+  /** Chosen at onboarding. Null means the account has not been onboarded yet. */
+  username: string | null;
   full_name: string | null;
+  /** A path under /assets/avatars/, written by onboarding. */
   avatar_url: string | null;
   total_points: number;
   level: number;

@@ -3,36 +3,39 @@
 
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { useAuth, needsOnboarding } from "@/hooks/useAuth";
+import { ShieldAlert } from "lucide-react";
+import { PageLoader } from "@/components/ui";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+    if (!user) {
       router.replace("/login");
+    } else if (needsOnboarding(profile)) {
+      // Signed in but never picked a handle — or still carrying the "New
+      // Member" placeholder 0007_onboarding.sql backfilled into `username`,
+      // which is the same thing: no real name has ever been saved for them.
+      router.replace("/onboarding");
     }
-  }, [user, loading, router]);
+  }, [user, profile, loading, router]);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-3">
-        <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          Verifying Sentinel Session...
-        </p>
-      </div>
-    );
-  }
+  if (loading) return <PageLoader label="Checking your session" />;
+
+  // Don't paint a dashboard that would greet them by a placeholder — the
+  // redirect above is already on its way to onboarding.
+  if (user && needsOnboarding(profile))
+    return <PageLoader label="Setting up your profile" />;
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-3 text-center">
-        <ShieldAlert className="w-10 h-10 text-rose-500 animate-pulse" />
-        <p className="text-sm font-bold text-slate-700">
-          Authentication Required. Redirecting to Login...
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center">
+        <ShieldAlert className="w-9 h-9 text-danger-600" />
+        <p className="text-sm font-bold text-ink">
+          You need to be signed in. Taking you to the login page…
         </p>
       </div>
     );

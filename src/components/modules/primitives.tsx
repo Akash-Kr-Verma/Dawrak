@@ -2,9 +2,15 @@
 //
 // Shared shell pieces for the module renderers.
 //
-// Deliberately plain. This phase is about getting the architecture and the
-// interaction types right; the visual pass comes next, against the HTML
-// prototype. Anything here that survives that pass is a bonus, not the goal.
+// These deliberately do NOT use the Dawrak palette. Everything inside the phone
+// frame is a picture of somebody else's software — an SMS thread, a browser, a
+// marketplace listing — and it has to look like that software, not like this
+// app. A phishing text rendered in brand violet with our rounded cards stops
+// being a convincing phishing text, which is the entire lesson. Neutral greys
+// and platform-ish chrome here are the correct choice, not leftovers.
+//
+// The controls *around* the frame (AdvanceButton, ScreenDots) are ours and do
+// follow the palette — that boundary is the point.
 "use client";
 
 import React from "react";
@@ -183,7 +189,7 @@ export function AdvanceButton({
   return (
     <button
       onClick={onClick}
-      className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors"
+      className="btn-press w-full py-3.5 px-4 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-xl transition-colors shadow-card"
     >
       {label}
     </button>
@@ -225,7 +231,7 @@ export function ScreenDots({ total, index }: { total: number; index: number }) {
         <span
           key={i}
           className={`h-1.5 rounded-full transition-all ${
-            i === index ? "w-5 bg-slate-800" : "w-1.5 bg-slate-300"
+            i === index ? "w-5 bg-brand-600" : "w-1.5 bg-line-strong"
           }`}
         />
       ))}
