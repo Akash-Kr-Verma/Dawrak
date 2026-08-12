@@ -443,7 +443,7 @@ function FeedbackPanel({
 
         {result.advanced_reasoner && (
           <p className="text-xs font-bold">
-            ⭐ That was one of the harder signals in this module.
+            That was one of the harder signals in this module.
           </p>
         )}
       </div>

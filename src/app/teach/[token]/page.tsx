@@ -50,7 +50,6 @@ import {
   Eye,
   MessageSquare,
   CheckCircle2,
-  Sparkles,
   ArrowRight,
 } from "lucide-react";
 
@@ -281,8 +280,7 @@ export default function TeachPage({ params }: { params: { token: string } }) {
             size={76}
             ring
           />
-          <span className="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full bg-mentor-50 border border-mentor-100 text-[10px] font-extrabold uppercase tracking-wider text-mentor-800">
-            <Sparkles className="w-3 h-3" />
+          <span className="inline-flex items-center mt-3 px-2.5 py-1 rounded-full bg-mentor-50 border border-mentor-100 text-[10px] font-extrabold uppercase tracking-wider text-mentor-800">
             Shared with you
           </span>
         </div>
