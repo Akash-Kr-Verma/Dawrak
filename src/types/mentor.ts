@@ -63,6 +63,36 @@ export interface PendingReview extends ShareResponse {
   share_token: string;
 }
 
+/** One row of the mentoring leaderboard, from `mentor_leaderboard()`.
+ *
+ *  Counts and public profile fields only. The function deliberately returns no
+ *  response text, no recipient email and no share token — ranking people must
+ *  not become a way to read what they were sent. See
+ *  supabase/migrations/0008_mentor_leaderboard.sql. */
+export interface LeaderboardEntry {
+  /** Ties share a rank: 1, 2, 2, 4. */
+  rank: number;
+  user_id: string;
+  /** Never an email. The placeholder 'New Member' resolves to a generic label. */
+  display_name: string;
+  avatar_url: string | null;
+  people_taught: number;
+}
+
+/** The signed-in mentor's own standing, from `my_mentor_impact()`.
+ *
+ *  Always returned, even at zero — `rank: null` is "you have not taught anyone
+ *  yet", which is a real state the card renders, not a failure. */
+export interface MyMentorImpact {
+  rank: number | null;
+  /** People who answered a link and got a reply, plus in-person sessions logged. */
+  people_taught: number;
+  /** Answered, still waiting on this mentor. Reached, not yet taught. */
+  awaiting_reply: number;
+  /** How many people have taught at least one person. The denominator. */
+  total_mentors: number;
+}
+
 /** What `get_share_link` returns to an anonymous recipient.
  *
  *  Everything that would answer the question for them is withheld — no verdict,

@@ -187,7 +187,7 @@ export default function MentorHubPage() {
       <div className="space-y-5 animate-fade-up">
         <PageHeader
           title="Mentor Hub"
-          subtitle="Finish a situation and you can teach it straight away!"
+          subtitle="Finish a module and you can teach it straight away!"
           right={
             <Badge tone="mentor" icon={Heart} className="px-3 py-1.5">
               {reachCount} {reachCount === 1 ? "person" : "people"} reached
@@ -232,7 +232,7 @@ export default function MentorHubPage() {
           <div className="mt-4">
             {pending.length === 0 ? (
               <EmptyState icon={Clock} tone="brand" title="Nothing waiting on you">
-                Share a situation below. When someone answers it, their reasoning
+                Share a module below. When someone answers it, their reasoning
                 shows up here for you to reply to.
               </EmptyState>
             ) : (
@@ -401,7 +401,7 @@ export default function MentorHubPage() {
                   </LinkButton>
                 }
               >
-                Complete any situation in the Learn tab and it appears here — one
+                Complete any module in the Learn tab and it appears here — one
                 is enough.
               </EmptyState>
             ) : (
@@ -458,7 +458,7 @@ export default function MentorHubPage() {
                 tone="success"
                 title="Waiting for its first branch"
               >
-                Share a situation you&apos;ve completed. The moment someone opens
+                Share a module you&apos;ve completed. The moment someone opens
                 that link and sends back their reasoning, their branch grows
                 here.
               </EmptyState>
@@ -559,7 +559,7 @@ export default function MentorHubPage() {
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Share this situation"
+            aria-label="Share this module"
             className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4 animate-fade-up"
           >
             <div className="bg-surface rounded-2xl max-w-md w-full border border-line shadow-lift p-5 sm:p-6 space-y-5">
@@ -583,7 +583,7 @@ export default function MentorHubPage() {
 
               <div className="bg-surface-sunken rounded-xl p-3 border border-line">
                 <p className="text-[11px] uppercase tracking-wide text-ink-muted font-extrabold mb-1">
-                  Situation
+                  Module
                 </p>
                 <p className="text-sm text-ink font-bold">{shareTarget.title}</p>
               </div>
@@ -661,7 +661,7 @@ function FlowStrip({
     {
       icon: CheckCircle2,
       label: "You finish",
-      note: "a situation",
+      note: "a module",
       on: mentorableCount > 0,
     },
     { icon: Share2, label: "You share", note: "a link", on: mentorableCount > 0 },

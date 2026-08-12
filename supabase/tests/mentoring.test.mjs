@@ -331,5 +331,165 @@ const bf2 = await db.query(`select * from public.backfill_legacy_module_progress
 ok("running it twice changes nothing",
    bf2.rows.every((r) => r.action !== "backfilled as completed"), JSON.stringify(bf2.rows));
 
+section("Migration 0008_mentor_leaderboard.sql");
+// The leaderboard reads profiles.username, which 0007 adds. Applied here rather
+// than alongside 0003 so this section stands alone.
+await db.exec(read("supabase/migrations/0007_onboarding.sql"));
+
+// Create the two Supabase roles so 0008's grant/revoke half actually runs
+// instead of being skipped. That half is not cosmetic: Supabase's default
+// privileges grant execute on every new function directly to anon and
+// authenticated, so revoking from PUBLIC alone leaves the leaderboard readable
+// by anyone and the internal counts function callable by any signed-in user.
+await db.exec(`
+  do $$ begin
+    if not exists (select 1 from pg_roles where rolname='anon') then create role anon; end if;
+    if not exists (select 1 from pg_roles where rolname='authenticated') then create role authenticated; end if;
+  end $$;
+`);
+try {
+  await db.exec(read("supabase/migrations/0008_mentor_leaderboard.sql"));
+  ok("0008 applies cleanly", true);
+} catch (e) {
+  ok("0008 applies cleanly", false, e.message);
+  process.exit(1);
+}
+try {
+  await db.exec(read("supabase/migrations/0008_mentor_leaderboard.sql"));
+  ok("0008 is re-runnable (idempotent)", true);
+} catch (e) {
+  ok("0008 is re-runnable (idempotent)", false, e.message);
+}
+
+// State at this point: MENTOR replied to one shared-link response and has one
+// in-person session logged. OTHER has taught nobody.
+const counts = async (uid) =>
+  (await db.query(`select * from public.mentor_impact_counts() where user_id = $1`, [uid]))
+    .rows[0] ?? null;
+
+let impact = await counts(MENTOR);
+ok("a replied response plus a logged session counts as 2 people taught",
+   impact?.people_taught === 2, JSON.stringify(impact));
+ok("nothing is awaiting a reply", impact?.awaiting_reply === 0, JSON.stringify(impact));
+ok("a learner who has taught nobody has no row", (await counts(OTHER)) === null);
+
+section("An unanswered response is reached, not taught");
+await db.query(
+  `select public.submit_share_response($1, $2, $3)`,
+  [token, "real", "The bank's number matched the one on my card."]
+);
+impact = await counts(MENTOR);
+ok("the new answer does not move the taught count", impact?.people_taught === 2, JSON.stringify(impact));
+ok("it shows up as awaiting a reply", impact?.awaiting_reply === 1, JSON.stringify(impact));
+
+await db.exec(`
+  update public.mentor_share_responses
+  set mentor_reply = 'Right call — and you checked it the slow way, which is the point.',
+      replied_at = now()
+  where mentor_reply is null;
+`);
+impact = await counts(MENTOR);
+ok("replying is what turns it into a person taught", impact?.people_taught === 3, JSON.stringify(impact));
+ok("and clears the awaiting count", impact?.awaiting_reply === 0, JSON.stringify(impact));
+
+section("mentor_leaderboard");
+const board = await db.query(`select * from public.mentor_leaderboard(10)`);
+ok("ranks the only mentor first", board.rows[0]?.rank === 1 && board.rows[0]?.people_taught === 3,
+   JSON.stringify(board.rows));
+ok("uses the mentor's name", board.rows[0]?.display_name === "Maria", JSON.stringify(board.rows));
+ok("a learner who has taught nobody is not listed",
+   !board.rows.some((r) => r.user_id === OTHER), JSON.stringify(board.rows));
+
+const boardCols = Object.keys(board.rows[0] ?? {});
+for (const leak of ["learner_reasoning", "recipient_email", "token", "receipt_token", "mentor_reply"]) {
+  ok(`does NOT expose ${leak}`, !boardCols.includes(leak), `exposed: ${boardCols.join(", ")}`);
+}
+
+// Ties share a rank rather than being split on signup date, which is not the
+// thing being measured.
+await db.exec(`
+  insert into public.mentoring_sessions (mentor_id, learner_name, relationship, topic_taught)
+  values ('${OTHER}', 'Neighbour', 'Community Member', 'Marketplace listings'),
+         ('${OTHER}', 'Cousin',    'Family Member',    'Marketplace listings'),
+         ('${OTHER}', 'Friend',    'Classmate',        'Marketplace listings');
+`);
+const tied = await db.query(`select * from public.mentor_leaderboard(10)`);
+ok("both mentors are listed", tied.rows.length === 2, JSON.stringify(tied.rows));
+ok("a tie shares rank 1", tied.rows.every((r) => r.rank === 1), JSON.stringify(tied.rows));
+ok("the older account is listed first", tied.rows[0]?.user_id === MENTOR, JSON.stringify(tied.rows));
+
+const capped = await db.query(`select * from public.mentor_leaderboard(1)`);
+ok("the limit is respected", capped.rows.length === 1);
+
+section("my_mentor_impact");
+await actAs(db, MENTOR);
+const meRow = (await db.query(`select * from public.my_mentor_impact()`)).rows[0];
+ok("reports the caller's own rank", meRow?.rank === 1, JSON.stringify(meRow));
+ok("reports the caller's own total", meRow?.people_taught === 3, JSON.stringify(meRow));
+ok("reports how many mentors are ranked", meRow?.total_mentors === 2, JSON.stringify(meRow));
+
+await actAs(db, OTHER);
+const themRow = (await db.query(`select * from public.my_mentor_impact()`)).rows[0];
+ok("the other mentor sees their own total, not the caller's",
+   themRow?.people_taught === 3 && themRow?.rank === 1, JSON.stringify(themRow));
+
+// Somebody who has taught nobody must still get a row back — "not ranked yet"
+// and "the query failed" have to be distinguishable in the UI.
+const NOBODY = "33333333-3333-3333-3333-333333333333";
+await db.exec(`
+  insert into auth.users (id) values ('${NOBODY}') on conflict do nothing;
+  insert into public.profiles (id, full_name) values ('${NOBODY}', 'New Member')
+    on conflict (id) do nothing;
+`);
+await actAs(db, NOBODY);
+const zeroRow = (await db.query(`select * from public.my_mentor_impact()`)).rows[0];
+ok("an unranked caller still gets exactly one row", zeroRow !== undefined);
+ok("with a null rank", zeroRow?.rank === null, JSON.stringify(zeroRow));
+ok("and a zero total", zeroRow?.people_taught === 0, JSON.stringify(zeroRow));
+
+section("Names shown to other users");
+const nameOf = async (u, f) =>
+  (await db.query(`select public.mentor_display_name($1, $2) as n`, [u, f])).rows[0].n;
+ok("prefers the chosen handle", (await nameOf("maria_r", "Maria Reyes")) === "maria_r");
+ok("falls back to the full name", (await nameOf(null, "Maria Reyes")) === "Maria Reyes");
+ok("never renders the 'New Member' placeholder",
+   (await nameOf("New Member", "New Member")) === "Dawrak member");
+ok("never renders the 'MIL Changemaker' placeholder",
+   (await nameOf(null, "MIL Changemaker")) === "Dawrak member");
+ok("falls back for a nameless row", (await nameOf(null, null)) === "Dawrak member");
+
+section("Leaderboard function hardening");
+const lbDefiners = await db.query(`
+  select p.proname, p.prosecdef, p.proconfig
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname='public'
+    and p.proname in ('mentor_impact_counts','mentor_leaderboard','my_mentor_impact')
+`);
+ok("all three leaderboard functions are security definer",
+   lbDefiners.rows.length === 3 && lbDefiners.rows.every((r) => r.prosecdef),
+   JSON.stringify(lbDefiners.rows.map((r) => [r.proname, r.prosecdef])));
+ok("all three pin search_path",
+   lbDefiners.rows.every((r) => (r.proconfig ?? []).some((c) => c.startsWith("search_path="))),
+   JSON.stringify(lbDefiners.rows.map((r) => [r.proname, r.proconfig])));
+
+// The grant half. Supabase's default privileges hand execute on every new
+// function to anon and authenticated directly, and a direct grant survives
+// `revoke ... from public` — so each role has to be named. The live database
+// caught this before these assertions existed.
+const canRun = async (role, fn) =>
+  (await db.query(`select has_function_privilege($1, $2, 'execute') as ok`, [role, fn])).rows[0].ok;
+
+ok("a signed-in user may read the leaderboard",
+   (await canRun("authenticated", "public.mentor_leaderboard(integer)")) === true);
+ok("a signed-in user may read their own standing",
+   (await canRun("authenticated", "public.my_mentor_impact()")) === true);
+ok("anon may NOT read the leaderboard",
+   (await canRun("anon", "public.mentor_leaderboard(integer)")) === false);
+ok("anon may NOT read anyone's standing",
+   (await canRun("anon", "public.my_mentor_impact()")) === false);
+ok("nobody may call the internal counts function directly",
+   (await canRun("authenticated", "public.mentor_impact_counts()")) === false &&
+   (await canRun("anon", "public.mentor_impact_counts()")) === false);
+
 console.log(`\n${"─".repeat(58)}\n${pass} passed, ${fail} failed\n${"─".repeat(58)}`);
 process.exit(fail ? 1 : 0);

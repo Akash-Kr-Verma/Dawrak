@@ -19,7 +19,9 @@ import { useAuth, displayName } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { useModuleList } from "@/hooks/useModules";
+import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { MentorLeaderboard, ChainStrip } from "@/components/MentorLeaderboard";
 import {
   Card,
   SectionHeader,
@@ -60,6 +62,15 @@ export default function ProfilePage() {
 
   // Module progress — the half this screen used to be blind to.
   const { modules, progress, loading: modulesLoading } = useModuleList(user?.id);
+
+  // Where this learner stands as a mentor, and who is above them. Not blocking:
+  // the page renders while it loads, and hides the section entirely if the
+  // migration is not applied here.
+  const {
+    top: board,
+    me: impact,
+    unavailable: noLeaderboard,
+  } = useLeaderboard(user?.id, 8);
 
   // Fetch real user attempts from PostgreSQL
   useEffect(() => {
@@ -144,7 +155,7 @@ export default function ProfilePage() {
     });
   if (completedModules.length >= 1)
     badges.push({
-      name: "First Situation",
+      name: "First Module",
       note: "Finished your 1st learning module",
       icon: BookOpen,
       tone: "brand",
@@ -166,7 +177,7 @@ export default function ProfilePage() {
   if (modules.length > 0 && completedModules.length >= modules.length)
     badges.push({
       name: "Full Circle",
-      note: "Finished all ten situations",
+      note: "Finished all ten modules",
       icon: Trophy,
       tone: "success",
     });
@@ -221,30 +232,13 @@ export default function ProfilePage() {
           </div>
         </Card>
 
-        {/* ---- Nothing yet ------------------------------------------- */}
-        {!hasAnyActivity && (
-          <Card accent="brand">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="min-w-0 flex-1">
-                <h2 className="text-lg font-black text-ink">
-                  Your record starts with one module
-                </h2>
-                <p className="text-sm text-ink-muted mt-1 leading-relaxed">
-                  Finish a learning module and your progress, skills and badges
-                  all begin filling in here.
-                </p>
-              </div>
-              <LinkButton
-                href="/learn"
-                size="md"
-                iconRight={ArrowRight}
-                className="shrink-0"
-              >
-                Start learning
-              </LinkButton>
-            </div>
-          </Card>
-        )}
+        {/* The "Your record starts with one module" card used to sit here, for
+            accounts with nothing done yet. Removed 2026-08-12: it only ever
+            appeared before the first module and said what two cards below it
+            already say — Your impact ends in "Finish a module first", and
+            Learning journey opens with "Nothing finished yet. Pick one to
+            start". A new account now lands on the leaderboard instead of on a
+            card explaining that it is empty. */}
 
         {/* ---- The numbers ------------------------------------------- */}
         {hasAnyActivity && (
@@ -274,6 +268,123 @@ export default function ProfilePage() {
               tone="mentor"
             />
           </div>
+        )}
+
+        {/* ---- Your impact ------------------------------------------- */}
+        {/* First card on the screen, above everything the learner did alone.
+            Modules finished, points and badges are all things you can earn
+            without another person being involved; this is the one that cannot
+            be. Putting it at the top is the product saying which of the two
+            matters. Shown whole rather than as a summary you tap through —
+            seeing the names above you is what makes teaching one more person
+            feel worth doing. Hidden entirely on a database without 0008 rather
+            than rendering an error into someone's profile. */}
+        {!noLeaderboard && impact && (
+          <Card accent="mentor">
+            <SectionHeader
+              icon={Trophy}
+              tone="mentor"
+              title="Your impact"
+              subtitle="Learn it, teach one person, and it keeps going. This counts the people you taught — not the modules you finished."
+              right={
+                impact.rank ? (
+                  <Badge tone="mentor" solid>
+                    #{impact.rank}
+                  </Badge>
+                ) : undefined
+              }
+            />
+
+            <div className="mt-5">
+              <ChainStrip />
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-ink tabular-nums leading-none">
+                  {impact.people_taught}
+                </span>
+                <span className="text-sm font-bold text-ink-soft">
+                  {impact.people_taught === 1 ? "person taught" : "people taught"}
+                </span>
+              </div>
+              {impact.rank ? (
+                <Badge tone="spark" icon={Users}>
+                  Rank {impact.rank} of {impact.total_mentors} mentors
+                </Badge>
+              ) : (
+                <Badge tone="info">Not ranked yet</Badge>
+              )}
+            </div>
+
+            {/* Only when there is nothing more specific to say. Someone with an
+                answer already waiting does not need to be told to go share. */}
+            {impact.people_taught === 0 && impact.awaiting_reply === 0 && (
+              <p className="text-xs text-ink-muted mt-3 leading-relaxed">
+                Share a module you&apos;ve finished. The first person who
+                answers it and gets your reply puts you on the board.
+              </p>
+            )}
+
+            {impact.awaiting_reply > 0 && (
+              <p className="text-xs text-ink-soft mt-3 leading-relaxed">
+                <strong className="text-ink">
+                  {impact.awaiting_reply}{" "}
+                  {impact.awaiting_reply === 1 ? "person" : "people"}
+                </strong>{" "}
+                answered and{" "}
+                {impact.awaiting_reply === 1 ? "is" : "are"} waiting on your
+                reply —{" "}
+                <Link href="/mentor" className="text-mentor-700 font-bold underline">
+                  finish teaching them
+                </Link>
+                .
+              </p>
+            )}
+
+            {/* The board itself, in full. */}
+            <div className="mt-5 pt-5 border-t border-line">
+              <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-ink-muted mb-4">
+                Who is teaching the most
+              </h3>
+              <MentorLeaderboard
+                rows={board}
+                me={impact}
+                currentUserId={user?.id}
+                myRow={{
+                  rank: impact.rank ?? 0,
+                  user_id: user?.id ?? "",
+                  display_name: name,
+                  avatar_url: profile?.avatar_url ?? null,
+                  people_taught: impact.people_taught,
+                }}
+              />
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {completedModules.length > 0 ? (
+                <LinkButton href="/mentor" tone="mentor" size="sm" iconRight={ArrowRight}>
+                  {impact.awaiting_reply > 0 ? "Reply and teach them" : "Teach someone"}
+                </LinkButton>
+              ) : (
+                <LinkButton href="/learn" tone="mentor" size="sm" iconRight={ArrowRight}>
+                  Finish a module first
+                </LinkButton>
+              )}
+              {/* Only when the board is longer than what fits here. */}
+              {impact.total_mentors > board.length && (
+                <LinkButton
+                  href="/profile/leaderboard"
+                  tone="mentor"
+                  variant="outline"
+                  size="sm"
+                  iconRight={ArrowRight}
+                >
+                  See all {impact.total_mentors}
+                </LinkButton>
+              )}
+            </div>
+          </Card>
         )}
 
         {/* ---- Learning journey -------------------------------------- */}
@@ -453,6 +564,7 @@ export default function ProfilePage() {
             </div>
           )}
         </Card>
+
       </div>
     </ProtectedRoute>
   );
