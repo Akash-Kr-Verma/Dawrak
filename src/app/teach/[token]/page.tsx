@@ -41,7 +41,18 @@ import {
 import { ScreenRenderer } from "@/components/modules/renderers";
 import { InteractiveCall } from "@/components/modules/InteractiveCall";
 import { PaymentActionFlow } from "@/components/modules/PaymentActionFlow";
-import { Loader2, ShieldAlert, Users, Check } from "lucide-react";
+import { Avatar } from "@/components/ui";
+import {
+  Loader2,
+  ShieldAlert,
+  Users,
+  Check,
+  Eye,
+  MessageSquare,
+  CheckCircle2,
+  Sparkles,
+  ArrowRight,
+} from "lucide-react";
 
 // `scenario` is the walk through the actual screens; `question` is the judgement
 // that follows it. A link whose module row predates 0006_share_scenario.sql has
@@ -258,22 +269,53 @@ export default function TeachPage({ params }: { params: { token: string } }) {
 
   return (
     <Shell>
-      {/* Who sent this, and why the reader is looking at it at all. */}
-      <div className="text-center mb-8">
-        <div className="w-14 h-14 rounded-full bg-brand-50 border-2 border-brand-600 mx-auto mb-4 flex items-center justify-center text-brand-700 font-black text-lg">
-          {initialOf(link.mentor_name)}
+      {/* Who sent this, and why the reader is looking at it at all.
+          The avatar is the mentor's own — 0009 puts it in the payload. Before
+          that this was a circle with one letter in it, which is what a form
+          looks like, not what a person looks like. */}
+      <div className="text-center mb-6">
+        <div className="inline-flex flex-col items-center">
+          <Avatar
+            url={link.mentor_avatar_url}
+            name={link.mentor_name}
+            size={76}
+            ring
+          />
+          <span className="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full bg-mentor-50 border border-mentor-100 text-[10px] font-extrabold uppercase tracking-wider text-mentor-800">
+            <Sparkles className="w-3 h-3" />
+            Shared with you
+          </span>
         </div>
-        <p className="text-ink-soft text-sm leading-relaxed">
-          <span className="font-bold text-ink">{link.mentor_name}</span>{" "}
+        <p className="text-ink-soft text-base leading-relaxed mt-3">
+          <span className="font-black text-ink">{link.mentor_name}</span>{" "}
           wants to share something they learned with you
         </p>
         {step !== "reply" && (
-          <p className="text-[11px] text-ink-faint mt-2">
-            Takes a minute. There&apos;s no score and no right answer waiting to
-            catch you out.
+          <p className="text-xs text-ink-muted mt-2 max-w-xs mx-auto leading-relaxed">
+            Takes a minute, and no account. There&apos;s no score and no right
+            answer waiting to catch you out.
           </p>
         )}
       </div>
+
+      {/* What is about to happen, in three beats. A stranger opening a link
+          from a friend has no idea whether this is a quiz, a signup or a scam
+          — saying so up front is what makes the first tap likely. */}
+      <BeatStrip step={step} />
+
+      {/* The one thing that makes this different from every other link like
+          it: a real person is on the other end. Said before they judge, not
+          after, because it changes how carefully they answer. */}
+      {(showScenario || showQuestion) && (
+        <div className="flex items-start gap-2.5 bg-surface border border-line rounded-2xl px-4 py-3 mb-6 shadow-card">
+          <MessageSquare className="w-4 h-4 text-mentor-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-ink-soft leading-relaxed">
+            Whatever you send goes straight to{" "}
+            <span className="font-bold text-ink">{link.mentor_name}</span> — no
+            bot, no answer key. They write back themselves.
+          </p>
+        </div>
+      )}
 
       {/* Content warning, where the module carries one. Shown before the
           situation itself, and it has to be accepted to continue. */}
@@ -371,25 +413,38 @@ export default function TeachPage({ params }: { params: { token: string } }) {
             <SituationCard title={link.module_title} prompt={link.prompt_text} />
           )}
 
-          <p className="text-center font-bold mb-4 text-ink">
+          <p className="text-center font-black text-lg mb-4 text-ink">
             {questionText}
           </p>
 
+          {/* Same two controls a signed-in learner gets in ModuleRunner —
+              tone and icon per side, selection shown with a ring rather than a
+              colour swap. Two identical violet outlines made the choice look
+              like a form field; this looks like a call you are making. */}
           <div className="grid grid-cols-2 gap-3 mb-6">
-            {(["negative", "positive"] as const).map((side) => {
+            {(["positive", "negative"] as const).map((side) => {
               const label = side === "positive" ? positiveLabel : negativeLabel;
               const selected = choice === side;
+              const Icon = side === "positive" ? CheckCircle2 : ShieldAlert;
+              const on =
+                side === "positive"
+                  ? "bg-success-50 border-success-600 text-success-800 ring-4 ring-success-100"
+                  : "bg-danger-50 border-danger-600 text-danger-700 ring-4 ring-danger-100";
+              const iconTone =
+                side === "positive" ? "text-success-600" : "text-danger-600";
               return (
                 <button
                   key={side}
                   onClick={() => setChoice(side)}
-                  className={`border-2 py-3.5 rounded-xl font-bold text-sm transition-colors ${
+                  aria-pressed={selected}
+                  className={`p-4 rounded-xl border-2 text-sm font-bold flex flex-col items-center gap-2 transition-all ${
                     selected
-                      ? "bg-brand-600 text-white border-brand-600 shadow-card"
-                      : "border-brand-600 text-brand-700 hover:bg-brand-50"
+                      ? on
+                      : "border-line hover:border-line-strong text-ink-soft bg-surface"
                   }`}
                 >
-                  {label}
+                  <Icon className={`w-6 h-6 ${iconTone}`} />
+                  <span>{label}</span>
                 </button>
               );
             })}
@@ -458,6 +513,13 @@ export default function TeachPage({ params }: { params: { token: string } }) {
           <SentCard text={answer ? formatAnswer(answer) : echo} />
 
           <div className="bg-surface-sunken rounded-2xl p-8 text-center border border-line">
+            <Avatar
+              url={link.mentor_avatar_url}
+              name={link.mentor_name}
+              size={56}
+              ring
+              className="mb-3"
+            />
             <div className="flex justify-center gap-1 mb-4">
               {[0, 1, 2].map((i) => (
                 <span
@@ -486,35 +548,52 @@ export default function TeachPage({ params }: { params: { token: string } }) {
       {step === "reply" && answer && (
         <>
           <SentCard text={formatAnswer(answer)} />
-          <div className="bg-white rounded-2xl shadow-sm border-2 border-success-600 p-6 mb-8">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-full bg-success-50 border border-success-600 flex items-center justify-center">
-                <Check className="w-4 h-4 text-success-700" />
+
+          {/* The reply is the payoff of the whole flow, so it is presented as
+              a message from a person — their face, their name, their words —
+              rather than as a result panel. */}
+          <div className="bg-surface rounded-2xl shadow-card border-2 border-success-600 p-6 mb-8">
+            <div className="flex items-center gap-3 mb-3">
+              <Avatar
+                url={answer.mentor_avatar_url ?? link.mentor_avatar_url}
+                name={answer.mentor_name}
+                size={44}
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-black text-ink truncate">
+                  {answer.mentor_name}
+                </p>
+                <p className="text-[11px] text-success-700 font-bold flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  replied to you
+                </p>
               </div>
-              <p className="text-[10px] uppercase tracking-wide text-ink-muted font-bold">
-                {answer.mentor_name} replied
-              </p>
             </div>
             <p className="text-[15px] leading-relaxed text-ink-soft whitespace-pre-wrap">
               {answer.mentor_reply}
             </p>
           </div>
 
-          <div className="text-center bg-brand-600 text-white rounded-2xl p-6">
-            <span className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center mx-auto mb-3">
+          <div className="bg-brand-600 text-white rounded-2xl p-6 text-center">
+            <span className="w-11 h-11 rounded-2xl bg-brand-700 flex items-center justify-center mx-auto mb-3">
               <Users className="w-5 h-5" />
             </span>
             <p className="font-black text-lg mb-1">
-              Want to get better at spotting these?
+              That&apos;s how Dawrak works
             </p>
-            <p className="text-sm text-brand-100 mb-4">
-              Join Dawrak — free, and you can start teaching others too.
+            <p className="text-sm text-brand-100 mb-1 leading-relaxed">
+              {link.mentor_name} learned this one, then taught it to you.
+            </p>
+            <p className="text-sm text-brand-100 mb-4 leading-relaxed">
+              Learn the next one yourself — free — and you can pass it on the
+              same way.
             </p>
             <a
               href="/login"
-              className="btn-press block bg-white hover:bg-brand-50 text-brand-700 px-6 py-3 rounded-xl font-bold w-full transition-colors"
+              className="btn-press inline-flex items-center justify-center gap-2 bg-white hover:bg-brand-50 text-brand-700 px-6 py-3 rounded-xl font-bold w-full transition-colors"
             >
               Join Dawrak
+              <ArrowRight className="w-4 h-4" />
             </a>
           </div>
         </>
@@ -557,9 +636,63 @@ function SituationCard({ title, prompt }: { title: string; prompt: string }) {
   );
 }
 
-function initialOf(name: string | null | undefined): string {
-  const trimmed = (name ?? "").trim();
-  return trimmed ? trimmed.charAt(0).toUpperCase() : "?";
+/**
+ * The three beats of this flow, with the current one lit.
+ *
+ * Someone opening a link a friend sent them does not know whether they are
+ * about to be quizzed, signed up, or phished — and this page asks them to look
+ * at a scam before it explains itself. Saying "look, decide, hear back" up
+ * front is what makes the first tap likely, and it also sets the expectation
+ * that the last step involves waiting for a human.
+ */
+function BeatStrip({ step }: { step: Step }) {
+  const at = step === "waiting" || step === "reply" ? 2 : step === "question" ? 1 : 0;
+  const beats = [
+    { icon: Eye, label: "Look at it" },
+    { icon: CheckCircle2, label: "Your call" },
+    { icon: MessageSquare, label: "Their reply" },
+  ];
+
+  return (
+    <ol className="flex items-center gap-1.5 mb-6">
+      {beats.map((b, i) => {
+        const Icon = b.icon;
+        const done = i < at;
+        const now = i === at;
+        return (
+          <li key={b.label} className="flex items-center gap-1.5 flex-1 min-w-0">
+            <div className="flex flex-col items-center text-center flex-1 min-w-0">
+              <span
+                className={`w-9 h-9 rounded-xl flex items-center justify-center mb-1.5 ${
+                  now
+                    ? "bg-brand-600 text-white ring-4 ring-brand-100"
+                    : done
+                    ? "bg-mentor-600 text-white"
+                    : "bg-surface-sunken text-ink-muted border border-line"
+                }`}
+              >
+                {done ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+              </span>
+              <span
+                className={`text-[10px] leading-tight truncate max-w-full ${
+                  now ? "font-extrabold text-ink" : "font-semibold text-ink-muted"
+                }`}
+              >
+                {b.label}
+              </span>
+            </div>
+            {i < beats.length - 1 && (
+              <span
+                className={`h-0.5 w-3 rounded-full shrink-0 ${
+                  done ? "bg-mentor-600" : "bg-line"
+                }`}
+              />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
 }
 
 function formatAnswer(a: PublicShareResponse): string {

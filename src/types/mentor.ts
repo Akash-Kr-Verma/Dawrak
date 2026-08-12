@@ -118,6 +118,9 @@ export interface PublicShareLink {
   content_warning: boolean;
   content_warning_text: string | null;
   mentor_name: string;
+  /** The mentor's stock avatar, added by 0009. Optional: a database still on
+   *  0006 returns a row without it and the page falls back to their initial. */
+  mentor_avatar_url?: string | null;
 
   format?: ModuleFormat;
   render_spec?: ModuleRenderSpec | null;
@@ -136,6 +139,9 @@ export interface PublicShareResponse {
   replied_at: string | null;
   module_title: string;
   mentor_name: string;
+  /** Same face as the opening screen. Added by 0009; optional for the same
+   *  reason as on PublicShareLink. */
+  mentor_avatar_url?: string | null;
 }
 
 /** The four generic prompts offered to a recipient, from share-view_3.html.

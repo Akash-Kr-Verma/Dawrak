@@ -491,5 +491,79 @@ ok("nobody may call the internal counts function directly",
    (await canRun("authenticated", "public.mentor_impact_counts()")) === false &&
    (await canRun("anon", "public.mentor_impact_counts()")) === false);
 
+section("Migration 0009_share_mentor_identity.sql");
+try {
+  await db.exec(read("supabase/migrations/0009_share_mentor_identity.sql"));
+  ok("0009 applies cleanly", true);
+} catch (e) {
+  ok("0009 applies cleanly", false, e.message);
+  process.exit(1);
+}
+try {
+  await db.exec(read("supabase/migrations/0009_share_mentor_identity.sql"));
+  ok("0009 is re-runnable (idempotent)", true);
+} catch (e) {
+  ok("0009 is re-runnable (idempotent)", false, e.message);
+}
+
+await db.exec(`
+  update public.profiles
+  set avatar_url = '/assets/avatars/profile-pic-3.png', username = 'maria_r'
+  where id = '${MENTOR}';
+`);
+const shared = (await db.query(`select * from public.get_share_link($1)`, [token])).rows[0];
+ok("the recipient gets the mentor's avatar",
+   shared?.mentor_avatar_url === "/assets/avatars/profile-pic-3.png",
+   JSON.stringify(shared?.mentor_avatar_url));
+ok("and the handle they chose, not the signup stamp",
+   shared?.mentor_name === "maria_r", JSON.stringify(shared?.mentor_name));
+
+// The whole reason the answer key is withheld has not changed; assert it again
+// against the new signature rather than trusting that a drop-and-recreate kept
+// the shape.
+const sharedCols = Object.keys(shared ?? {});
+for (const leak of ["verdict", "signals", "rubric", "canonical_reasoning", "reveal", "distractors"]) {
+  ok(`still does NOT expose ${leak}`, !sharedCols.includes(leak), `exposed: ${sharedCols.join(", ")}`);
+}
+ok("still carries the scenario itself", sharedCols.includes("render_spec"));
+
+await db.exec(`update public.profiles set avatar_url = '' where id = '${MENTOR}';`);
+const noPic = (await db.query(`select * from public.get_share_link($1)`, [token])).rows[0];
+ok("an empty avatar comes back null, not an empty string",
+   noPic?.mentor_avatar_url === null, JSON.stringify(noPic?.mentor_avatar_url));
+
+// A mentor who never picked a handle must not be introduced to a stranger by
+// the placeholder handle_new_user stamped on them.
+await db.exec(`
+  update public.profiles set username = 'New Member', full_name = 'New Member'
+  where id = '${MENTOR}';
+`);
+const placeholder = (await db.query(`select * from public.get_share_link($1)`, [token])).rows[0];
+ok("a placeholder name is never shown to the recipient",
+   placeholder?.mentor_name === "Dawrak member", JSON.stringify(placeholder?.mentor_name));
+await db.exec(`
+  update public.profiles
+  set username = 'maria_r', full_name = 'Maria', avatar_url = '/assets/avatars/profile-pic-3.png'
+  where id = '${MENTOR}';
+`);
+
+const replied = (await db.query(`select * from public.get_share_response($1)`, [receipt])).rows[0];
+ok("the reply screen carries the same face",
+   replied?.mentor_avatar_url === "/assets/avatars/profile-pic-3.png",
+   JSON.stringify(replied?.mentor_avatar_url));
+ok("and the same name", replied?.mentor_name === "maria_r", JSON.stringify(replied?.mentor_name));
+ok("the recipient still gets their own reply back",
+   (replied?.mentor_reply ?? "").startsWith("Exactly right"));
+
+// Dropping a function takes its grants with it. The recipient has no account,
+// so anon losing execute here would break the entire public flow.
+ok("anon can still open a share link",
+   (await canRun("anon", "public.get_share_link(text)")) === true);
+ok("anon can still poll for the reply",
+   (await canRun("anon", "public.get_share_response(uuid)")) === true);
+ok("a signed-in caller can too",
+   (await canRun("authenticated", "public.get_share_link(text)")) === true &&
+   (await canRun("authenticated", "public.get_share_response(uuid)")) === true);
+
 console.log(`\n${"─".repeat(58)}\n${pass} passed, ${fail} failed\n${"─".repeat(58)}`);
 process.exit(fail ? 1 : 0);
