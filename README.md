@@ -1,6 +1,6 @@
-# Play Your Part - Media & Information Literacy App
+# Dawrak - Media & Information Literacy App
 
-Welcome to **Play Your Part**, a dynamic Media and Information Literacy (MIL) application developed for the UNESCO hackathon. This app is designed to help users learn to identify misinformation, verify sources, and resist digital manipulation while tracking their progress through an engaging dashboard.
+Welcome to **Dawrak** (دورك — "your turn"), a dynamic Media and Information Literacy (MIL) application developed for the UNESCO hackathon. This app is designed to help users learn to identify misinformation, verify sources, and resist digital manipulation while tracking their progress through an engaging dashboard.
 
 ## 🚀 What We've Built So Far (Current Status)
 

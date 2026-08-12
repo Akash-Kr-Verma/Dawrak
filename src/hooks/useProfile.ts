@@ -3,8 +3,13 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types/database';
 
+// NOTE: nothing imports this hook — useAuth is what the app actually reads
+// profiles through. It is left in place rather than deleted because removing a
+// module is outside a UI pass, but be aware this fallback invents a profile
+// that no real row backs.
 export const DEMO_PROFILE: Profile = {
   id: 'demo-user-id',
+  username: null,
   full_name: 'Demo Changemaker',
   avatar_url: null,
   total_points: 0,

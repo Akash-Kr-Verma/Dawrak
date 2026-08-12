@@ -41,7 +41,7 @@ import {
 import { ScreenRenderer } from "@/components/modules/renderers";
 import { InteractiveCall } from "@/components/modules/InteractiveCall";
 import { PaymentActionFlow } from "@/components/modules/PaymentActionFlow";
-import { Loader2, ShieldAlert, Users, Check, Sparkles } from "lucide-react";
+import { Loader2, ShieldAlert, Users, Check } from "lucide-react";
 
 // `scenario` is the walk through the actual screens; `question` is the judgement
 // that follows it. A link whose module row predates 0006_share_scenario.sql has
@@ -203,8 +203,8 @@ export default function TeachPage({ params }: { params: { token: string } }) {
     return (
       <Shell>
         <div className="flex flex-col items-center gap-3 py-24">
-          <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <Loader2 className="w-8 h-8 text-brand-600 animate-spin" />
+          <p className="text-xs font-semibold text-ink-faint uppercase tracking-wider">
             Opening what they sent you
           </p>
         </div>
@@ -216,13 +216,13 @@ export default function TeachPage({ params }: { params: { token: string } }) {
     return (
       <Shell>
         <div className="text-center py-16 space-y-3">
-          <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
-            <ShieldAlert className="w-6 h-6 text-slate-500" />
+          <div className="w-14 h-14 bg-surface-sunken rounded-full flex items-center justify-center mx-auto">
+            <ShieldAlert className="w-6 h-6 text-ink-muted" />
           </div>
-          <h1 className="text-lg font-black text-slate-900">
+          <h1 className="text-lg font-black text-ink">
             This link isn&apos;t active
           </h1>
-          <p className="text-sm text-slate-500 max-w-xs mx-auto">
+          <p className="text-sm text-ink-muted max-w-xs mx-auto">
             The person who shared it may have turned it off, or the address was
             copied incompletely.
           </p>
@@ -260,15 +260,15 @@ export default function TeachPage({ params }: { params: { token: string } }) {
     <Shell>
       {/* Who sent this, and why the reader is looking at it at all. */}
       <div className="text-center mb-8">
-        <div className="w-14 h-14 rounded-full bg-emerald-50 border-2 border-emerald-700 mx-auto mb-4 flex items-center justify-center text-emerald-800 font-black text-lg">
+        <div className="w-14 h-14 rounded-full bg-brand-50 border-2 border-brand-600 mx-auto mb-4 flex items-center justify-center text-brand-700 font-black text-lg">
           {initialOf(link.mentor_name)}
         </div>
-        <p className="text-slate-600 text-sm leading-relaxed">
-          <span className="font-bold text-slate-900">{link.mentor_name}</span>{" "}
+        <p className="text-ink-soft text-sm leading-relaxed">
+          <span className="font-bold text-ink">{link.mentor_name}</span>{" "}
           wants to share something they learned with you
         </p>
         {step !== "reply" && (
-          <p className="text-[11px] text-slate-400 mt-2">
+          <p className="text-[11px] text-ink-faint mt-2">
             Takes a minute. There&apos;s no score and no right answer waiting to
             catch you out.
           </p>
@@ -278,15 +278,15 @@ export default function TeachPage({ params }: { params: { token: string } }) {
       {/* Content warning, where the module carries one. Shown before the
           situation itself, and it has to be accepted to continue. */}
       {showWarning && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-6 text-center space-y-3">
-          <ShieldAlert className="w-6 h-6 text-amber-600 mx-auto" />
-          <p className="text-sm text-amber-900">
+        <div className="bg-spark-50 border border-spark-100 rounded-2xl p-6 mb-6 text-center space-y-3">
+          <ShieldAlert className="w-6 h-6 text-spark-600 mx-auto" />
+          <p className="text-sm text-spark-700">
             {link.content_warning_text ??
               "This one covers a difficult subject."}
           </p>
           <button
             onClick={() => setWarningAccepted(true)}
-            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold"
+            className="px-4 py-2 bg-spark-600 hover:bg-spark-700 text-white rounded-xl text-xs font-bold"
           >
             I&apos;m ready
           </button>
@@ -359,11 +359,11 @@ export default function TeachPage({ params }: { params: { token: string } }) {
               they were looking at it a second ago. Where there were no screens
               to walk, this card IS the situation. */}
           {scenario ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-5 py-4 mb-6">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">
+            <div className="bg-surface rounded-2xl shadow-card border border-line px-5 py-4 mb-6">
+              <p className="text-[10px] uppercase tracking-wider text-ink-muted font-bold mb-1">
                 What you just looked at
               </p>
-              <p className="text-sm font-bold text-slate-900">
+              <p className="text-sm font-bold text-ink">
                 {link.module_title}
               </p>
             </div>
@@ -371,7 +371,7 @@ export default function TeachPage({ params }: { params: { token: string } }) {
             <SituationCard title={link.module_title} prompt={link.prompt_text} />
           )}
 
-          <p className="text-center font-bold mb-4 text-slate-900">
+          <p className="text-center font-bold mb-4 text-ink">
             {questionText}
           </p>
 
@@ -385,8 +385,8 @@ export default function TeachPage({ params }: { params: { token: string } }) {
                   onClick={() => setChoice(side)}
                   className={`border-2 py-3.5 rounded-xl font-bold text-sm transition-colors ${
                     selected
-                      ? "bg-emerald-700 text-white border-emerald-700 shadow-sm"
-                      : "border-emerald-700 text-emerald-800 hover:bg-emerald-50"
+                      ? "bg-brand-600 text-white border-brand-600 shadow-card"
+                      : "border-brand-600 text-brand-700 hover:bg-brand-50"
                   }`}
                 >
                   {label}
@@ -397,10 +397,10 @@ export default function TeachPage({ params }: { params: { token: string } }) {
 
           {choice && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
-              <p className="font-bold mb-1 text-slate-900 text-sm">
+              <p className="font-bold mb-1 text-ink text-sm">
                 What made you think that?
               </p>
-              <p className="text-[11px] text-slate-500 mb-3">
+              <p className="text-[11px] text-ink-muted mb-3">
                 Pick what applies, or write it yourself — this is the part{" "}
                 {link.mentor_name} actually reads.
               </p>
@@ -411,8 +411,8 @@ export default function TeachPage({ params }: { params: { token: string } }) {
                     onClick={() => toggleChip(c.id)}
                     className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                       chips.has(c.id)
-                        ? "bg-emerald-700 text-white border-emerald-700"
-                        : "border-slate-300 text-slate-700 hover:border-slate-400"
+                        ? "bg-brand-600 text-white border-brand-600"
+                        : "border-line-strong text-ink-soft hover:border-brand-300"
                     }`}
                   >
                     {c.label}
@@ -424,20 +424,20 @@ export default function TeachPage({ params }: { params: { token: string } }) {
                 onChange={(e) => setReasonText(e.target.value)}
                 maxLength={2000}
                 placeholder="Say it in your own words too, if you want..."
-                className="w-full min-h-[90px] p-4 rounded-xl border-2 border-slate-200 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                className="w-full min-h-[90px] p-4 rounded-xl border-2 border-line text-sm mb-4 text-ink focus:outline-none focus:border-brand-600"
               />
               {submitError && (
-                <p className="text-xs text-rose-600 mb-3">{submitError}</p>
+                <p className="text-xs text-danger-700 mb-3">{submitError}</p>
               )}
               <button
                 onClick={handleSubmit}
                 disabled={!ready || submitting}
-                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3.5 rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                 Send to {link.mentor_name}
               </button>
-              <p className="text-[11px] text-slate-500 text-center mt-3">
+              <p className="text-[11px] text-ink-muted text-center mt-3">
                 There&apos;s no automatic answer key — {link.mentor_name} will
                 reply personally, in their own words.
               </p>
@@ -448,36 +448,36 @@ export default function TeachPage({ params }: { params: { token: string } }) {
 
       {step === "waiting" && (
         <>
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-3 mb-4 flex items-center gap-2">
-            <Check className="w-4 h-4 text-emerald-700 shrink-0" />
-            <p className="text-xs font-bold text-emerald-900">
+          <div className="bg-success-50 border border-success-100 rounded-2xl px-5 py-3 mb-4 flex items-center gap-2">
+            <Check className="w-4 h-4 text-success-600 shrink-0" />
+            <p className="text-xs font-bold text-success-800">
               Sent to {link.mentor_name}
             </p>
           </div>
 
           <SentCard text={answer ? formatAnswer(answer) : echo} />
 
-          <div className="bg-slate-50 rounded-2xl p-8 text-center border border-slate-200">
+          <div className="bg-surface-sunken rounded-2xl p-8 text-center border border-line">
             <div className="flex justify-center gap-1 mb-4">
               {[0, 1, 2].map((i) => (
                 <span
                   key={i}
-                  className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"
+                  className="w-2.5 h-2.5 rounded-full bg-brand-600 animate-pulse"
                   style={{ animationDelay: `${i * 0.2}s` }}
                 />
               ))}
             </div>
-            <p className="font-bold mb-1 text-slate-900">
+            <p className="font-bold mb-1 text-ink">
               {link.mentor_name} is reading your answer
             </p>
-            <p className="text-sm text-slate-500 leading-relaxed">
+            <p className="text-sm text-ink-muted leading-relaxed">
               They reply personally — no bot, no automatic answer key. This page
               updates itself, so you can leave it open or come back to the same
               link later.
             </p>
           </div>
 
-          <p className="text-[11px] text-slate-400 text-center mt-4">
+          <p className="text-[11px] text-ink-faint text-center mt-4">
             Keep this link — it&apos;s where their reply will show up.
           </p>
         </>
@@ -486,31 +486,35 @@ export default function TeachPage({ params }: { params: { token: string } }) {
       {step === "reply" && answer && (
         <>
           <SentCard text={formatAnswer(answer)} />
-          <div className="bg-white rounded-2xl shadow-sm border-2 border-emerald-700 p-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border-2 border-success-600 p-6 mb-8">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-full bg-emerald-50 border border-emerald-600 flex items-center justify-center">
-                <Check className="w-4 h-4 text-emerald-700" />
+              <div className="w-7 h-7 rounded-full bg-success-50 border border-success-600 flex items-center justify-center">
+                <Check className="w-4 h-4 text-success-700" />
               </div>
-              <p className="text-[10px] uppercase tracking-wide text-slate-500 font-bold">
+              <p className="text-[10px] uppercase tracking-wide text-ink-muted font-bold">
                 {answer.mentor_name} replied
               </p>
             </div>
-            <p className="text-[15px] leading-relaxed text-slate-800 whitespace-pre-wrap">
+            <p className="text-[15px] leading-relaxed text-ink-soft whitespace-pre-wrap">
               {answer.mentor_reply}
             </p>
           </div>
 
-          <div className="text-center bg-emerald-800 text-white rounded-2xl p-6">
-            <Sparkles className="w-5 h-5 mx-auto mb-2 text-amber-300" />
-            <p className="font-bold mb-1">Want to get better at spotting these?</p>
-            <p className="text-sm text-white/80 mb-4">
-              Join Play Your Part — free, and you can start teaching others too.
+          <div className="text-center bg-brand-600 text-white rounded-2xl p-6">
+            <span className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center mx-auto mb-3">
+              <Users className="w-5 h-5" />
+            </span>
+            <p className="font-black text-lg mb-1">
+              Want to get better at spotting these?
+            </p>
+            <p className="text-sm text-brand-100 mb-4">
+              Join Dawrak — free, and you can start teaching others too.
             </p>
             <a
               href="/login"
-              className="block bg-amber-400 hover:bg-amber-300 text-amber-950 px-6 py-3 rounded-xl font-bold w-full transition-colors"
+              className="btn-press block bg-white hover:bg-brand-50 text-brand-700 px-6 py-3 rounded-xl font-bold w-full transition-colors"
             >
-              Join Play Your Part
+              Join Dawrak
             </a>
           </div>
         </>
@@ -534,19 +538,19 @@ function hasScenario(link: PublicShareLink): boolean {
  *  **bold** and the asterisks must not reach the reader. */
 function SituationCard({ title, prompt }: { title: string; prompt: string }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-      <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/60">
-        <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+    <div className="bg-surface rounded-2xl shadow-card border border-line overflow-hidden mb-6">
+      <div className="px-5 py-3 border-b border-line bg-surface-sunken">
+        <p className="text-[10px] uppercase tracking-wider text-ink-muted font-bold">
           Take a look at this
         </p>
       </div>
       <div className="p-6">
-        <h1 className="text-xl font-black leading-snug mb-3 text-slate-900">
+        <h1 className="text-xl font-black leading-snug mb-3 text-ink">
           {title}
         </h1>
         <RichText
           text={prompt}
-          className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap block"
+          className="text-ink-soft text-sm leading-relaxed whitespace-pre-wrap block"
         />
       </div>
     </div>
@@ -572,23 +576,25 @@ function formatAnswer(a: PublicShareResponse): string {
 
 function SentCard({ text }: { text: string }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-4">
-      <p className="text-[10px] uppercase tracking-wide text-slate-500 font-bold mb-2">
+    <div className="bg-surface rounded-2xl shadow-card border border-line p-6 mb-4">
+      <p className="text-[10px] uppercase tracking-wide text-ink-muted font-bold mb-2">
         What you sent
       </p>
-      <p className="text-sm text-slate-700 leading-relaxed">{text || "—"}</p>
+      <p className="text-sm text-ink-soft leading-relaxed">{text || "—"}</p>
     </div>
   );
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-lg mx-auto px-6 py-10">
+    <div className="min-h-screen bg-canvas">
+      <div className="max-w-lg mx-auto px-5 sm:px-6 py-10">
         <div className="flex items-center gap-2 mb-8 justify-center">
-          <Users className="w-5 h-5 text-emerald-700" />
-          <span className="font-bold text-emerald-800 tracking-tight">
-            Play Your Part
+          <span className="w-8 h-8 rounded-xl bg-brand-600 text-white flex items-center justify-center">
+            <Users className="w-4 h-4" />
+          </span>
+          <span className="font-black text-ink tracking-tight text-lg">
+            Dawrak
           </span>
         </div>
         {children}

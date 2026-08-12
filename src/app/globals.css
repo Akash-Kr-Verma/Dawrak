@@ -2,12 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dawrak base. Body text is ink-soft, not a light grey — copy has to be
+   readable on a phone in daylight, which is where this app actually gets used. */
 body {
-  color: #0F172A;
-  background-color: #F8FAFC;
+  color: #45405f;
+  background-color: #f6f5fb;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* NOTE: headings deliberately have no global colour rule. An element selector
+   beats nothing, so `h1 { color: ink }` silently overrode inherited colour and
+   painted dark-on-violet headings inside the coloured banners (2.55:1). Headings
+   either carry `text-ink` explicitly or inherit from their container. */
 
 /* Custom class for safe areas (useful for mobile safari/iOS wrappers) */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@layer base {
+  /* One visible focus treatment everywhere, including for keyboard users who
+     never see a hover state. */
+  :where(a, button, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid #5a3fd6;
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+}
+
+@layer components {
+  /* Presses register on touch. Cheap, and it makes the whole app feel alive
+     without animating anything on load. */
+  .btn-press {
+    @apply transition-transform duration-150 active:scale-[0.97];
+  }
+
+  /* Loading placeholder that matches the palette instead of flashing grey. */
+  .skeleton {
+    background-image: linear-gradient(
+      90deg,
+      #f2f1f9 0%,
+      #e7e5f0 50%,
+      #f2f1f9 100%
+    );
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded-lg;
+  }
+
+  /* Long lists of module cards read better with a hairline rule than with a
+     border on every item. */
+  .divide-line > * + * {
+    border-top: 1px solid #e7e5f0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -13,6 +13,10 @@
 //   share a module you finished  →  someone answers it  →  it lands in
 //   Pending Reviews  →  you reply personally  →  their branch joins the tree
 //
+// That loop is drawn at the top of the screen rather than left for the reader
+// to infer from the order of the cards, because it is the part of the product
+// nobody guesses on their own.
+//
 // The offline half — "Log Teaching Proof", a self-reported session with a photo
 // that was never uploaded anywhere — is gone. Sessions already logged are still
 // shown in the tree, because they are real rows somebody entered; there is just
@@ -27,10 +31,19 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { chipLabel } from "@/types/mentor";
 import type { MentorableModule, PendingReview } from "@/types/mentor";
 import {
+  Card,
+  SectionHeader,
+  Badge,
+  Button,
+  LinkButton,
+  EmptyState,
+  PageLoader,
+  PageHeader,
+} from "@/components/ui";
+import {
   Users,
   Share2,
   Loader2,
-  Sparkles,
   UserPlus,
   Copy,
   Check,
@@ -43,6 +56,9 @@ import {
   ChevronUp,
   Clock,
   CheckCircle2,
+  Heart,
+  PenLine,
+  ArrowRight,
 } from "lucide-react";
 
 export default function MentorHubPage() {
@@ -158,13 +174,7 @@ export default function MentorHubPage() {
     }
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-      </div>
-    );
-  }
+  if (authLoading || loading) return <PageLoader label="Loading your hub" />;
 
   // Everyone this mentor has actually reached: one branch per person who opened
   // a shared link and answered, plus any offline session logged before that
@@ -174,156 +184,151 @@ export default function MentorHubPage() {
 
   return (
     <ProtectedRoute>
-      <div className="max-w-5xl mx-auto space-y-6 pb-20">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              Mentor Hub
-            </h1>
-            <p className="text-slate-500 text-sm mt-0.5">
-              Finish a module and you can mentor it right away.
-            </p>
-          </div>
+      <div className="space-y-5 animate-fade-up">
+        <PageHeader
+          title="Mentor Hub"
+          subtitle="Finish a situation and you can teach it straight away!"
+          right={
+            <Badge tone="mentor" icon={Heart} className="px-3 py-1.5">
+              {reachCount} {reachCount === 1 ? "person" : "people"} reached
+            </Badge>
+          }
+        />
 
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-xs font-bold text-indigo-900">
-            <Sparkles className="w-4 h-4 text-indigo-600" />
-            <span>Community Beacon ({reachCount} People Reached)</span>
-          </div>
-        </div>
+        {/* ---- The loop, drawn ---------------------------------------- */}
+        <FlowStrip
+          pendingCount={pending.length}
+          mentorableCount={mentorable.length}
+        />
 
         {error && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900">
+          <div className="bg-spark-50 border border-spark-100 rounded-2xl p-4 text-sm text-spark-700 font-medium">
             {error}
           </div>
         )}
 
-        {/* ---- Pending Reviews ------------------------------------------ */}
-        <section className="bg-white rounded-2xl border border-slate-200 border-t-4 border-t-indigo-500 p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-indigo-600" />
-              Pending Reviews
-            </h2>
-            {pending.length > 0 && (
-              <span className="bg-indigo-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
-                {pending.length}
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-slate-500 mb-4">
-            People you shared a link with have answered. They are waiting on you
-            personally — there is no automatic answer key on their end.
-          </p>
+        {/* ---- Pending Reviews ---------------------------------------- */}
+        <Card accent="brand">
+          <SectionHeader
+            icon={MessageSquare}
+            tone="brand"
+            title="Waiting on you"
+            subtitle="Someone answered a link you shared. There is no answer key on their end — your reply is the feedback."
+            right={
+              pending.length > 0 ? (
+                <Badge tone="brand" solid>
+                  {pending.length}
+                </Badge>
+              ) : undefined
+            }
+          />
 
           {reviewError && (
-            <p className="text-xs text-rose-600 mb-3">{reviewError}</p>
+            <p className="text-xs text-danger-700 font-medium mt-3">
+              {reviewError}
+            </p>
           )}
 
-          {pending.length === 0 ? (
-            <div className="bg-slate-50/60 border border-slate-200 rounded-xl p-5 text-center">
-              <Clock className="w-5 h-5 text-slate-400 mx-auto mb-2" />
-              <p className="text-xs font-bold text-slate-800 mb-1">
-                Nothing waiting on you
-              </p>
-              <p className="text-[11px] text-slate-500">
-                Share a module below. When someone answers it, their explanation
+          <div className="mt-4">
+            {pending.length === 0 ? (
+              <EmptyState icon={Clock} tone="brand" title="Nothing waiting on you">
+                Share a situation below. When someone answers it, their reasoning
                 shows up here for you to reply to.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {pending.map((p) => {
-                const isOpen = openReview === p.id;
-                return (
-                  <div
-                    key={p.id}
-                    className="border border-slate-200 rounded-xl bg-slate-50/60 overflow-hidden"
-                  >
-                    <button
-                      onClick={() => setOpenReview(isOpen ? null : p.id)}
-                      className="w-full flex items-center gap-2 p-4 text-left hover:bg-slate-100/60 transition-colors"
+              </EmptyState>
+            ) : (
+              <div className="space-y-3">
+                {pending.map((p) => {
+                  const isOpen = openReview === p.id;
+                  return (
+                    <div
+                      key={p.id}
+                      className="border border-line rounded-xl bg-surface-sunken overflow-hidden"
                     >
-                      <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-                        <Link2 className="w-3.5 h-3.5 text-emerald-700" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-slate-900 leading-tight">
-                          Someone from your shared link
-                        </p>
-                        <p className="text-[11px] text-slate-500 italic truncate">
-                          {p.module_title} · not a member yet ·{" "}
-                          {formatWhen(p.created_at)}
-                        </p>
-                      </div>
-                      <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full shrink-0">
-                        Awaiting you
-                      </span>
-                      {isOpen ? (
-                        <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-                      )}
-                    </button>
+                      <button
+                        onClick={() => setOpenReview(isOpen ? null : p.id)}
+                        aria-expanded={isOpen}
+                        className="w-full flex items-center gap-3 p-4 text-left hover:bg-brand-50 transition-colors"
+                      >
+                        <span className="w-9 h-9 rounded-xl bg-brand-100 flex items-center justify-center shrink-0">
+                          <Link2 className="w-4 h-4 text-brand-700" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-ink leading-tight">
+                            Someone from your shared link
+                          </span>
+                          <span className="block text-xs text-ink-muted truncate mt-0.5">
+                            {p.module_title} · not a member yet ·{" "}
+                            {formatWhen(p.created_at)}
+                          </span>
+                        </span>
+                        <Badge tone="spark" className="shrink-0 hidden sm:inline-flex">
+                          Awaiting you
+                        </Badge>
+                        {isOpen ? (
+                          <ChevronUp className="w-4 h-4 text-ink-muted shrink-0" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-ink-muted shrink-0" />
+                        )}
+                      </button>
 
-                    {isOpen && (
-                      <div className="px-4 pb-4 space-y-3 animate-in fade-in duration-200">
-                        <Submission review={p} />
+                      {isOpen && (
+                        <div className="px-4 pb-4 space-y-3 animate-fade-up">
+                          <Submission review={p} />
 
-                        <div>
-                          <label className="block text-[10px] uppercase tracking-wide text-slate-500 font-bold mb-1.5">
-                            Your reply
-                          </label>
-                          <textarea
-                            rows={4}
-                            value={replyDrafts[p.id] ?? ""}
-                            onChange={(e) =>
-                              setReplyDrafts((d) => ({
-                                ...d,
-                                [p.id]: e.target.value,
-                              }))
-                            }
-                            placeholder="Reply in your own words — what did they get right, and what did they miss?"
-                            className="w-full p-3 border border-slate-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                          />
-                          <p className="text-[10px] text-slate-400 mt-1">
-                            They see this on the same link they answered on.
-                            Sending it marks the review complete.
-                          </p>
+                          <div>
+                            <label
+                              htmlFor={`reply-${p.id}`}
+                              className="block text-[11px] uppercase tracking-wide text-ink-muted font-extrabold mb-1.5"
+                            >
+                              Your reply
+                            </label>
+                            <textarea
+                              id={`reply-${p.id}`}
+                              rows={4}
+                              value={replyDrafts[p.id] ?? ""}
+                              onChange={(e) =>
+                                setReplyDrafts((d) => ({
+                                  ...d,
+                                  [p.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="What did they get right, and what did they miss?"
+                              className="w-full p-3 border-2 border-line rounded-xl text-sm bg-surface text-ink placeholder:text-ink-faint focus:border-brand-600 focus:outline-none transition-colors"
+                            />
+                            <p className="text-[11px] text-ink-muted mt-1.5">
+                              They see this on the same link they answered on.
+                              Sending it marks the review complete.
+                            </p>
+                          </div>
+
+                          <Button
+                            onClick={() => handleReply(p.id)}
+                            disabled={!(replyDrafts[p.id] ?? "").trim()}
+                            loading={replyingTo === p.id}
+                            icon={Send}
+                            size="sm"
+                          >
+                            Send reply
+                          </Button>
                         </div>
-
-                        <button
-                          onClick={() => handleReply(p.id)}
-                          disabled={
-                            replyingTo === p.id ||
-                            !(replyDrafts[p.id] ?? "").trim()
-                          }
-                          className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
-                        >
-                          {replyingTo === p.id ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Send className="w-3.5 h-3.5" />
-                          )}
-                          Send reply
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Reviews already answered. Collapsed, because the point of the
               section is what still needs the mentor. */}
           {answered.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-100">
+            <div className="mt-4 pt-4 border-t border-line">
               <button
                 onClick={() => setShowAnswered((v) => !v)}
-                className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900"
+                aria-expanded={showAnswered}
+                className="flex items-center gap-1.5 text-xs font-extrabold text-success-700 hover:text-success-800"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <CheckCircle2 className="w-4 h-4" />
                 {answered.length} review{answered.length === 1 ? "" : "s"}{" "}
                 completed
                 {showAnswered ? (
@@ -334,31 +339,31 @@ export default function MentorHubPage() {
               </button>
 
               {showAnswered && (
-                <div className="space-y-3 mt-3 animate-in fade-in duration-200">
+                <div className="space-y-3 mt-3 animate-fade-up">
                   {answered.map((a) => (
                     <div
                       key={a.id}
-                      className="border border-emerald-200 bg-emerald-50/40 rounded-xl p-4 space-y-3"
+                      className="border border-success-100 bg-success-50 rounded-xl p-4 space-y-3"
                     >
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-white border border-emerald-200 flex items-center justify-center shrink-0">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                        </div>
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-9 h-9 rounded-xl bg-surface border border-success-100 flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-4 h-4 text-success-600" />
+                        </span>
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-900 leading-tight">
+                          <p className="text-sm font-bold text-ink leading-tight">
                             Someone from your shared link
                           </p>
-                          <p className="text-[11px] text-slate-500 italic truncate">
+                          <p className="text-xs text-ink-muted truncate">
                             {a.module_title} · replied {formatWhen(a.replied_at)}
                           </p>
                         </div>
                       </div>
                       <Submission review={a} />
-                      <div className="bg-white border border-emerald-200 rounded-xl p-3">
-                        <p className="text-[10px] uppercase tracking-wide text-slate-500 font-bold mb-1">
+                      <div className="bg-surface border border-success-100 rounded-xl p-3">
+                        <p className="text-[11px] uppercase tracking-wide text-ink-muted font-extrabold mb-1">
                           You replied
                         </p>
-                        <p className="text-xs text-slate-700 whitespace-pre-wrap">
+                        <p className="text-sm text-ink-soft whitespace-pre-wrap leading-relaxed">
                           {a.mentor_reply}
                         </p>
                       </div>
@@ -368,141 +373,141 @@ export default function MentorHubPage() {
               )}
             </div>
           )}
-        </section>
+        </Card>
 
-        {/* ---- Share a module you've mastered ---------------------------- */}
-        <section className="bg-emerald-50/60 border-2 border-emerald-200 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-1">
-            <Users className="w-4 h-4 text-emerald-700" />
-            <h2 className="text-base font-black text-emerald-900">
-              Share a situation you&apos;ve mastered
-            </h2>
-          </div>
-          <p className="text-xs text-slate-600 mb-4">
-            Pick something you&apos;ve already completed and send it to someone{" "}
-            <strong>outside Play Your Part</strong> — no account needed for them
-            to open it. Their answer comes back to you here.
-          </p>
+        {/* ---- Share a module you've mastered -------------------------- */}
+        <Card accent="mentor">
+          <SectionHeader
+            icon={Share2}
+            tone="mentor"
+            title="Share a module you've mastered"
+            subtitle="Send it to someone outside Dawrak — they need no account to open it. Their answer comes back to you above."
+          />
 
-          {mentorable.length === 0 ? (
-            <div className="bg-white border border-slate-200 rounded-xl p-5 text-center">
-              <Lock className="w-5 h-5 text-slate-400 mx-auto mb-2" />
-              <p className="text-xs font-bold text-slate-800 mb-1">
-                Nothing to mentor yet
-              </p>
-              <p className="text-[11px] text-slate-500">
-                Complete any module in the Learn tab and it appears here — one
-                is enough.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {mentorable.map((m) => (
-                <div
-                  key={m.module_id}
-                  className="bg-white p-3.5 rounded-xl border border-slate-200 flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 truncate">
-                        {m.title}
-                      </p>
-                      {m.active_share_token && (
-                        <p className="text-[10px] text-emerald-700 font-medium">
-                          Link active
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => openShare(m)}
-                    className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shrink-0 inline-flex items-center gap-1.5"
+          <div className="mt-4">
+            {mentorable.length === 0 ? (
+              <EmptyState
+                icon={Lock}
+                tone="mentor"
+                title="Nothing to mentor yet"
+                action={
+                  <LinkButton
+                    href="/learn"
+                    tone="mentor"
+                    size="sm"
+                    iconRight={ArrowRight}
                   >
-                    <Share2 className="w-3.5 h-3.5" />
-                    Share
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* ---- Ripple Tree ----------------------------------------------- */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between min-h-[380px]">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-slate-900" />
-              <h2 className="text-base font-black text-slate-900">
-                Your Ripple Tree
-              </h2>
-            </div>
-            <span className="text-[11px] text-slate-500 font-medium">
-              One branch per person you&apos;ve mentored
-            </span>
-          </div>
-
-          <div className="flex-1 flex flex-col items-center justify-center py-8">
-            {reachCount === 0 ? (
-              <div className="text-center max-w-sm space-y-3 px-4">
-                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100 shadow-sm">
-                  <UserPlus className="w-6 h-6" />
-                </div>
-                <h3 className="text-base font-black text-slate-900">
-                  Your Tree is Waiting for Its First Seed
-                </h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Share a module you&apos;ve completed. The moment someone opens
-                  that link and sends back their reasoning, their branch grows
-                  here.
-                </p>
-              </div>
+                    Go to Learn
+                  </LinkButton>
+                }
+              >
+                Complete any situation in the Learn tab and it appears here — one
+                is enough.
+              </EmptyState>
             ) : (
-              <div className="w-full space-y-6">
+              <ul className="space-y-2">
+                {mentorable.map((m) => (
+                  <li
+                    key={m.module_id}
+                    className="bg-surface p-3.5 rounded-xl border border-line flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-8 h-8 rounded-lg bg-success-50 border border-success-100 flex items-center justify-center shrink-0">
+                        <Check className="w-4 h-4 text-success-600" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-ink truncate">
+                          {m.title}
+                        </p>
+                        {m.active_share_token && (
+                          <p className="text-[11px] text-mentor-700 font-bold">
+                            Link active
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => openShare(m)}
+                      tone="mentor"
+                      size="sm"
+                      icon={Share2}
+                      className="shrink-0"
+                    >
+                      Share
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Card>
+
+        {/* ---- Ripple Tree -------------------------------------------- */}
+        <Card>
+          <SectionHeader
+            icon={Users}
+            tone="success"
+            title="Your ripple tree"
+            subtitle="One branch per person you've reached."
+          />
+
+          <div className="mt-5">
+            {reachCount === 0 ? (
+              <EmptyState
+                icon={UserPlus}
+                tone="success"
+                title="Waiting for its first branch"
+              >
+                Share a situation you&apos;ve completed. The moment someone opens
+                that link and sends back their reasoning, their branch grows
+                here.
+              </EmptyState>
+            ) : (
+              <div className="space-y-5">
                 <div className="flex flex-col items-center">
-                  <div className="w-16 h-16 bg-slate-900 text-white font-black text-base rounded-full flex items-center justify-center shadow-lg ring-4 ring-emerald-100 z-10">
+                  <div className="w-16 h-16 bg-brand-600 text-white font-black text-sm rounded-full flex items-center justify-center shadow-pop ring-4 ring-brand-100">
                     You
                   </div>
-                  <div className="w-0.5 h-6 bg-slate-300"></div>
+                  <div className="w-0.5 h-6 bg-line-strong" />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {reached.map((r) => (
                     <div
                       key={r.id}
-                      className={`p-3.5 rounded-xl border flex items-start gap-3 shadow-sm animate-in fade-in zoom-in duration-300 ${
+                      className={`p-3.5 rounded-xl border flex items-start gap-3 animate-grow-in ${
                         r.mentor_reply
-                          ? "border-emerald-200 bg-emerald-50/40"
-                          : "border-indigo-200 bg-indigo-50/40"
+                          ? "border-success-100 bg-success-50"
+                          : "border-brand-100 bg-brand-50"
                       }`}
                     >
-                      <div
-                        className={`w-10 h-10 rounded-lg text-white flex items-center justify-center shrink-0 ${
-                          r.mentor_reply ? "bg-emerald-600" : "bg-indigo-600"
+                      <span
+                        className={`w-10 h-10 rounded-xl text-white flex items-center justify-center shrink-0 ${
+                          r.mentor_reply ? "bg-success-600" : "bg-brand-600"
                         }`}
                       >
                         <Link2 className="w-4 h-4" />
-                      </div>
+                      </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1">
-                          <h4 className="text-xs font-bold text-slate-900 truncate">
+                          <h4 className="text-xs font-extrabold text-ink truncate">
                             Shared link
                           </h4>
                           <span
-                            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
                               r.mentor_reply
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-indigo-100 text-indigo-800"
+                                ? "bg-success-100 text-success-800"
+                                : "bg-brand-100 text-brand-800"
                             }`}
                           >
                             {r.mentor_reply ? "Mentored" : "Awaiting you"}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 truncate mt-0.5 capitalize">
+                        <p className="text-[11px] text-ink-muted truncate mt-0.5 capitalize">
                           Answered &ldquo;{r.learner_verdict ?? "—"}&rdquo;
                         </p>
-                        <p className="text-[11px] text-emerald-900 font-medium truncate mt-1">
-                          📚 {r.module_title}
+                        <p className="text-[11px] text-ink-soft font-medium truncate mt-1">
+                          {r.module_title}
                         </p>
                       </div>
                     </div>
@@ -513,122 +518,116 @@ export default function MentorHubPage() {
                   {sessions.map((node) => (
                     <div
                       key={node.id}
-                      className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 flex items-start gap-3 shadow-sm"
+                      className="p-3.5 rounded-xl border border-line bg-surface-sunken flex items-start gap-3"
                     >
-                      <div className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold flex items-center justify-center shrink-0 text-sm">
+                      <span className="w-10 h-10 rounded-xl bg-ink-muted text-white font-bold flex items-center justify-center shrink-0 text-sm">
                         {(node.learner_name ?? "?").charAt(0).toUpperCase()}
-                      </div>
+                      </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1">
-                          <h4 className="text-xs font-bold text-slate-900 truncate">
+                          <h4 className="text-xs font-extrabold text-ink truncate">
                             {node.learner_name ?? "Someone"}
                           </h4>
-                          <span className="text-[10px] bg-slate-200 text-slate-700 font-semibold px-1.5 py-0.5 rounded shrink-0">
+                          <span className="text-[10px] bg-line text-ink-soft font-bold px-1.5 py-0.5 rounded shrink-0">
                             In person
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        <p className="text-[11px] text-ink-muted truncate mt-0.5">
                           {node.relationship ?? "—"}
                         </p>
                         {node.topic_taught && (
-                          <p className="text-[11px] text-slate-700 font-medium truncate mt-1">
-                            📚 {node.topic_taught}
+                          <p className="text-[11px] text-ink-soft font-medium truncate mt-1">
+                            {node.topic_taught}
                           </p>
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
+
+                <p className="text-xs text-ink-muted font-medium text-center pt-2 border-t border-line">
+                  Your ripple tree has reached {reachCount} secondary learner
+                  {reachCount === 1 ? "" : "s"}.
+                </p>
               </div>
             )}
           </div>
+        </Card>
 
-          <div className="pt-4 border-t border-slate-100">
-            <span className="text-xs text-slate-500 font-medium">
-              {reachCount > 0
-                ? `Your Ripple Tree has reached ${reachCount} secondary learner${
-                    reachCount === 1 ? "" : "s"
-                  }.`
-                : "Share a module link above to plant the first branch."}
-            </span>
-          </div>
-        </div>
-
-        {/* ---- Share link modal ------------------------------------------ */}
+        {/* ---- Share link modal ---------------------------------------- */}
         {shareTarget && (
-          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Share this situation"
+            className="fixed inset-0 bg-ink/60 z-50 flex items-center justify-center p-4 animate-fade-up"
+          >
+            <div className="bg-surface rounded-2xl max-w-md w-full border border-line shadow-lift p-5 sm:p-6 space-y-5">
+              <div className="flex items-center justify-between border-b border-line pb-3">
                 <div className="flex items-center gap-2">
-                  <Share2 className="w-5 h-5 text-emerald-600" />
-                  <h3 className="text-base font-black text-slate-900">
+                  <span className="w-8 h-8 rounded-xl bg-mentor-50 border border-mentor-100 flex items-center justify-center">
+                    <Share2 className="w-4 h-4 text-mentor-600" />
+                  </span>
+                  <h3 className="text-base font-extrabold text-ink">
                     Share with someone new
                   </h3>
                 </div>
                 <button
                   onClick={() => setShareTarget(null)}
-                  className="text-slate-400 hover:text-slate-700"
+                  aria-label="Close"
+                  className="text-ink-muted hover:text-ink p-1 rounded-lg hover:bg-surface-sunken"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="bg-slate-50 rounded-xl p-3">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500 font-bold mb-1">
+              <div className="bg-surface-sunken rounded-xl p-3 border border-line">
+                <p className="text-[11px] uppercase tracking-wide text-ink-muted font-extrabold mb-1">
                   Situation
                 </p>
-                <p className="text-xs text-slate-800 font-medium">
-                  {shareTarget.title}
-                </p>
+                <p className="text-sm text-ink font-bold">{shareTarget.title}</p>
               </div>
 
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Anyone can open this link without an account. They&apos;ll write
-                what they think and why — then it lands in your{" "}
-                <strong>Pending Reviews</strong>, and you reply personally. They
-                are never shown the answer.
+              <p className="text-sm text-ink-soft leading-relaxed">
+                Anyone can open this link without an account. They&apos;ll walk
+                the same screens you did and write what they think — then it
+                lands in <strong className="text-ink">Waiting on you</strong>,
+                and you reply personally. They are never shown the answer.
               </p>
 
               {shareBusy && (
                 <div className="flex justify-center py-3">
-                  <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" />
+                  <Loader2 className="w-5 h-5 text-mentor-600 animate-spin" />
                 </div>
               )}
 
               {shareError && (
-                <p className="text-xs text-rose-600">{shareError}</p>
+                <p className="text-xs text-danger-700 font-medium">{shareError}</p>
               )}
 
               {shareUrl && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <div className="flex items-center gap-2 bg-surface-sunken p-2 rounded-xl border border-line">
                     <input
                       id="share-url-input"
                       type="text"
                       readOnly
                       value={shareUrl}
                       onFocus={(e) => e.currentTarget.select()}
-                      className="bg-transparent text-xs text-slate-700 font-mono w-full focus:outline-none"
+                      className="bg-transparent text-xs text-ink-soft font-mono w-full focus:outline-none px-1"
                     />
-                    <button
+                    <Button
                       onClick={handleCopyLink}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shrink-0 transition-colors flex items-center gap-1"
+                      tone={copied ? "success" : "mentor"}
+                      size="sm"
+                      icon={copied ? Check : Copy}
+                      className="shrink-0"
                     >
-                      {copied ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>Copy</span>
-                        </>
-                      )}
-                    </button>
+                      {copied ? "Copied" : "Copy"}
+                    </Button>
                   </div>
                   {copyFailed && (
-                    <p className="text-[11px] text-amber-700">
+                    <p className="text-[11px] text-spark-700 font-medium">
                       This browser wouldn&apos;t let the page copy for you — the
                       link is selected above, copy it by hand.
                     </p>
@@ -643,32 +642,99 @@ export default function MentorHubPage() {
   );
 }
 
+/**
+ * The mentoring loop as a row of steps.
+ *
+ * Nobody infers this flow from a stack of cards — the recipient has no account,
+ * gets no score, and waits on a human reply, which is the opposite of what every
+ * other learning app trains people to expect. So it is stated outright, and the
+ * steps that are live for this mentor right now are the ones lit up.
+ */
+function FlowStrip({
+  pendingCount,
+  mentorableCount,
+}: {
+  pendingCount: number;
+  mentorableCount: number;
+}) {
+  const steps = [
+    {
+      icon: CheckCircle2,
+      label: "You finish",
+      note: "a situation",
+      on: mentorableCount > 0,
+    },
+    { icon: Share2, label: "You share", note: "a link", on: mentorableCount > 0 },
+    { icon: PenLine, label: "They answer", note: "no account", on: pendingCount > 0 },
+    { icon: MessageSquare, label: "You reply", note: "personally", on: pendingCount > 0 },
+    { icon: Heart, label: "Tree grows", note: "one branch", on: pendingCount > 0 },
+  ];
+
+  return (
+    <div className="bg-surface border border-line rounded-2xl p-4 shadow-card overflow-x-auto">
+      <ol className="flex items-stretch gap-1.5 min-w-[520px]">
+        {steps.map((s, i) => {
+          const Icon = s.icon;
+          return (
+            <li key={s.label} className="flex items-center gap-1.5 flex-1">
+              <div className="flex flex-col items-center text-center flex-1">
+                <span
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center mb-1.5 ${
+                    s.on
+                      ? "bg-mentor-600 text-white"
+                      : "bg-surface-sunken text-ink-faint border border-line"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                </span>
+                <span
+                  className={`text-[11px] font-extrabold leading-tight ${
+                    s.on ? "text-ink" : "text-ink-muted"
+                  }`}
+                >
+                  {s.label}
+                </span>
+                <span className="text-[10px] text-ink-muted leading-tight">
+                  {s.note}
+                </span>
+              </div>
+              {i < steps.length - 1 && (
+                <ArrowRight className="w-3.5 h-3.5 text-line-strong shrink-0" />
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
 /** What the recipient actually sent: their verdict, the prompts they picked,
  *  and anything they wrote themselves. */
 function Submission({ review }: { review: PendingReview }) {
   const chips = review.reason_chips ?? [];
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2">
-      <p className="text-[10px] uppercase tracking-wide text-slate-500 font-bold">
+    <div className="bg-surface border border-line rounded-xl p-3.5 space-y-2">
+      <p className="text-[11px] uppercase tracking-wide text-ink-muted font-extrabold">
         What they sent
       </p>
-      <p className="text-xs text-slate-700">
-        <span className="font-bold capitalize">
+      <p className="text-sm text-ink-soft">
+        <span className="font-extrabold capitalize text-ink">
           {review.learner_verdict ?? "—"}
         </span>
         {chips.length > 0 && (
-          <span className="text-slate-500">
+          <span className="text-ink-muted">
             {" · "}
             {chips.map(chipLabel).join(" · ")}
           </span>
         )}
       </p>
       {review.learner_reasoning ? (
-        <p className="text-xs text-slate-600 italic leading-relaxed whitespace-pre-wrap">
+        <p className="text-sm text-ink-soft italic leading-relaxed whitespace-pre-wrap">
           &ldquo;{review.learner_reasoning}&rdquo;
         </p>
       ) : (
-        <p className="text-xs text-slate-400 italic">
+        <p className="text-sm text-ink-muted italic">
           They picked reasons but didn&apos;t write anything of their own.
         </p>
       )}
