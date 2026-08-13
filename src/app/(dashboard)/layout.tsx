@@ -1,6 +1,7 @@
 // src/app/(dashboard)/layout.tsx
 import React from 'react';
 import BottomNav from '@/components/layout/BottomNav';
+import GuidedTour from '@/components/tour/GuidedTour';
 
 export default function DashboardLayout({
   children,
@@ -15,6 +16,11 @@ export default function DashboardLayout({
       </main>
 
       <BottomNav />
+
+      {/* First-run walkthrough. Renders nothing at all unless it is running,
+          and reads the screens through data-tour attributes — it owns no app
+          state. Deleting this line removes the tour. */}
+      <GuidedTour />
     </div>
   );
 }

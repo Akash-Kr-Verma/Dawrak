@@ -65,6 +65,7 @@ export function Card({
   padded = true,
   accent,
   as: Tag = "div",
+  "data-tour": dataTour,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -72,9 +73,13 @@ export function Card({
   /** Draws a 3px rule along the top edge. Use it to say what a card is for. */
   accent?: Tone;
   as?: React.ElementType;
+  /** Anchor name for the guided tour. Read by src/components/tour; it has no
+   *  effect on the card itself and nothing else should key off it. */
+  "data-tour"?: string;
 }) {
   return (
     <Tag
+      data-tour={dataTour}
       className={`bg-surface border border-line rounded-2xl shadow-card overflow-hidden ${className}`}
     >
       {accent && <div className={`h-[3px] w-full ${TONE_ACCENT_BAR[accent]}`} />}
@@ -448,13 +453,19 @@ export function PageHeader({
   title,
   subtitle,
   right,
+  "data-tour": dataTour,
 }: {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   right?: React.ReactNode;
+  /** Anchor name for the guided tour. See the note on Card. */
+  "data-tour"?: string;
 }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+    <div
+      data-tour={dataTour}
+      className="flex flex-col sm:flex-row sm:items-end justify-between gap-3"
+    >
       <div className="min-w-0">
         <h1 className="text-2xl sm:text-[26px] font-black text-ink tracking-tight leading-tight">
           {title}

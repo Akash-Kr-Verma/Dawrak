@@ -140,6 +140,7 @@ export default function ChallengePage() {
     <ProtectedRoute>
       <div className="space-y-5 animate-fade-up">
         <PageHeader
+          data-tour="challenge-daily"
           title="Today's case"
           subtitle="Look at what came in, make a call, and say what convinced you."
           right={

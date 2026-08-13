@@ -22,6 +22,7 @@ import { useModuleList } from "@/hooks/useModules";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MentorLeaderboard, ChainStrip } from "@/components/MentorLeaderboard";
+import { startGuidedTour } from "@/components/tour/GuidedTour";
 import {
   Card,
   SectionHeader,
@@ -198,7 +199,7 @@ export default function ProfilePage() {
     <ProtectedRoute>
       <div className="space-y-5 animate-fade-up">
         {/* ---- Identity ---------------------------------------------- */}
-        <Card accent="brand">
+        <Card accent="brand" data-tour="profile-identity">
           <div className="flex items-start gap-4">
             <Avatar url={profile?.avatar_url} name={name} size={72} ring />
             <div className="min-w-0 flex-1">
@@ -280,7 +281,7 @@ export default function ProfilePage() {
             feel worth doing. Hidden entirely on a database without 0008 rather
             than rendering an error into someone's profile. */}
         {!noLeaderboard && impact && (
-          <Card accent="mentor">
+          <Card accent="mentor" data-tour="profile-impact">
             <SectionHeader
               icon={Trophy}
               tone="mentor"
@@ -565,6 +566,17 @@ export default function ProfilePage() {
           )}
         </Card>
 
+        {/* Replays the first-run walkthrough. Quiet on purpose — it is a way
+            back to an explanation, not a feature of the profile. */}
+        <div className="text-center pt-1">
+          <button
+            type="button"
+            onClick={startGuidedTour}
+            className="text-xs font-bold text-ink-muted hover:text-ink underline underline-offset-4"
+          >
+            How Dawrak works
+          </button>
+        </div>
       </div>
     </ProtectedRoute>
   );

@@ -99,7 +99,12 @@ export default function LearnPage() {
     <ProtectedRoute>
       <div className="space-y-5 animate-fade-up">
         {/* ---- Progress banner: where am I ---------------------------- */}
-        <section className="rounded-2xl bg-brand-600 text-white p-5 sm:p-6 shadow-pop">
+        {/* data-tour marks the fallback anchor for the guided tour's Learn
+            step, and is also what tells the tour this screen has painted. */}
+        <section
+          data-tour="learn-progress"
+          className="rounded-2xl bg-brand-600 text-white p-5 sm:p-6 shadow-pop"
+        >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-brand-100 text-xs font-bold uppercase tracking-wider">
@@ -155,7 +160,7 @@ export default function LearnPage() {
 
         {/* ---- What do I do next ------------------------------------- */}
         {nextModule && (
-          <Card accent="brand" padded={false}>
+          <Card accent="brand" padded={false} data-tour="learn-next">
             <div className="p-5 sm:p-6">
               <Badge tone={doneCount === 0 ? "brand" : "spark"} icon={PlayCircle}>
                 {doneCount === 0 ? "Start here" : "Up next"}

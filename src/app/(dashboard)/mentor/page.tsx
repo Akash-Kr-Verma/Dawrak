@@ -208,7 +208,7 @@ export default function MentorHubPage() {
         )}
 
         {/* ---- Pending Reviews ---------------------------------------- */}
-        <Card accent="brand">
+        <Card accent="brand" data-tour="mentor-pending">
           <SectionHeader
             icon={MessageSquare}
             tone="brand"
@@ -376,7 +376,7 @@ export default function MentorHubPage() {
         </Card>
 
         {/* ---- Share a module you've mastered -------------------------- */}
-        <Card accent="mentor">
+        <Card accent="mentor" data-tour="mentor-share">
           <SectionHeader
             icon={Share2}
             tone="mentor"
