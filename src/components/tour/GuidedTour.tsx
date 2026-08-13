@@ -211,36 +211,40 @@ export default function GuidedTour() {
     if (!step.targets) return; // Welcome card: centred, no spotlight.
 
     let cancelled = false;
-    let tries = 0;
-    let timer = 0;
+    let settle = 0;
 
-    const look = () => {
-      if (cancelled) return;
+    // Watched, not polled on a deadline, for the same reason as the auto-start
+    // below: these screens each fetch before they paint, and a step whose
+    // anchor arrives late should still get its spotlight. Until it does, the
+    // tooltip sits centred — that is the fallback, not a failure.
+    const look = (): boolean => {
+      if (cancelled) return false;
       const el = step.targets!.reduce<HTMLElement | null>(
         (found, sel) => found ?? document.querySelector<HTMLElement>(sel),
         null
       );
+      if (!el) return false;
 
-      if (el) {
-        targetRef.current = el;
-        scrollAnchorIntoView(el);
-        measureTarget();
-        // Smooth scrolling is still in flight; the scroll listener tracks it,
-        // and this catches the case where nothing had to move at all.
-        window.setTimeout(() => !cancelled && measureTarget(), 420);
-        return;
-      }
-
-      // The screen is probably still loading its data. Give it a while, then
-      // fall back to a centred tooltip rather than stalling the tour.
-      if (++tries > 45) return;
-      timer = window.setTimeout(look, 200);
+      targetRef.current = el;
+      scrollAnchorIntoView(el);
+      measureTarget();
+      // Smooth scrolling is still in flight; the scroll listener tracks it,
+      // and this catches the case where nothing had to move at all.
+      settle = window.setTimeout(() => !cancelled && measureTarget(), 420);
+      return true;
     };
 
-    timer = window.setTimeout(look, 60);
+    if (look()) return () => window.clearTimeout(settle);
+
+    const observer = new MutationObserver(() => {
+      if (look()) observer.disconnect();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      observer.disconnect();
+      window.clearTimeout(settle);
     };
   }, [open, index, pathname, step, router, measureTarget]);
 
@@ -289,6 +293,15 @@ export default function GuidedTour() {
   // First run. Waits for Learn to actually paint: that element only exists
   // once ProtectedRoute has let a signed-in, onboarded account through, which
   // saves this component from having to know anything about auth.
+  //
+  // This watches rather than polls on a deadline. It used to give up after ten
+  // seconds, which is fine locally and wrong in production: a cold serverless
+  // function in front of a cold Supabase connection has taken 18s just to
+  // answer getUser() on this project, and Learn does not paint until both the
+  // session and the module list have landed. Every first-run user slower than
+  // the deadline silently never saw the tour, and because the retry was keyed
+  // to a route change, landing on Learn and staying there meant it never came
+  // back. A MutationObserver costs nothing while it waits and cannot expire.
   useEffect(() => {
     if (autoStarted.current) return;
     if (pathname !== TOUR_HOME) return;
@@ -297,25 +310,19 @@ export default function GuidedTour() {
       return;
     }
 
-    let cancelled = false;
-    let tries = 0;
-    let timer = 0;
+    if (document.querySelector(TOUR_READY_SELECTOR)) {
+      startTour();
+      return;
+    }
 
-    const look = () => {
-      if (cancelled) return;
+    const observer = new MutationObserver(() => {
       if (document.querySelector(TOUR_READY_SELECTOR)) {
+        observer.disconnect();
         startTour();
-        return;
       }
-      if (++tries > 50) return; // Never loaded — stay out of the way.
-      timer = window.setTimeout(look, 200);
-    };
-
-    timer = window.setTimeout(look, 450);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
   }, [pathname, startTour]);
 
   // Escape leaves. Nobody should be trapped in an explanation.
