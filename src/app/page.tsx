@@ -21,7 +21,7 @@
 import React, { useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowRight, BookOpen, Users, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Users, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { LinkButton } from "@/components/ui";
 import { avatarPath } from "@/lib/avatars";
@@ -50,7 +50,10 @@ const LOOP = [
     ink: "text-mentor-600",
   },
   {
-    icon: Sparkles,
+    // Trophy, because that is the icon the profile screen's own "Your impact"
+    // card carries — the row should point at something the learner will
+    // recognise once they get there.
+    icon: Trophy,
     title: "See your impact",
     body: "Watch how far the thing you taught someone actually travels.",
     tile: "bg-spark-50 border-spark-100",
