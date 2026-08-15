@@ -4,21 +4,59 @@
 //
 // It used to be a bare `redirect("/learn")`, which meant a first-time visitor's
 // introduction to Dawrak was the login form. The app has a point of view and
-// nothing said it before you were asked for a password. This screen says it:
-// wordmark, what the product does, a still of the actual Learn tab, one way in.
+// nothing said it before you were asked for a password.
+//
+// This is built as a sibling of src/app/login/page.tsx: same canvas, same
+// doodle background, same centred max-w-md column, same card. Land here, tap
+// Get Started, and the login screen that follows looks like the same place —
+// which is the whole reason it is composed from the pieces already in use
+// rather than from a layout invented for this one screen.
 //
 // Nothing downstream changed. "Get Started" goes to /login, which is exactly
 // where "/" landed people before (via /learn → ProtectedRoute), so the
 // login → onboarding → /learn flow is untouched. Anyone already signed in never
-// sees this screen at all — they are sent straight to /learn, as before.
+// sees this screen — they are sent straight to /learn, as before.
 "use client";
 
 import React, { useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, ArrowRight } from "lucide-react";
+import { ArrowRight, BookOpen, Users, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { LinkButton } from "@/components/ui";
-import { AppPreview } from "@/components/welcome/AppPreview";
+import { avatarPath } from "@/lib/avatars";
+
+/**
+ * The loop the product is actually about, in three beats.
+ *
+ * Each keeps its own meaning from the palette — brand for the learning half,
+ * mentor teal for the teaching half, spark for what you get back — so this
+ * reads as the same colour system the rest of the app uses, not as three
+ * shades picked to look nice in a row.
+ */
+const LOOP = [
+  {
+    icon: BookOpen,
+    title: "Learn",
+    body: "Judge ten real situations, then find out what was really going on.",
+    tile: "bg-brand-50 border-brand-100",
+    ink: "text-brand-600",
+  },
+  {
+    icon: Users,
+    title: "Teach",
+    body: "Share a module you've finished, and reply to whoever answers it.",
+    tile: "bg-mentor-50 border-mentor-100",
+    ink: "text-mentor-600",
+  },
+  {
+    icon: Sparkles,
+    title: "See your impact",
+    body: "Watch how far the thing you taught someone actually travels.",
+    tile: "bg-spark-50 border-spark-100",
+    ink: "text-spark-600",
+  },
+] as const;
 
 export default function WelcomePage() {
   const router = useRouter();
@@ -36,77 +74,106 @@ export default function WelcomePage() {
   if (loading || user) return <div className="min-h-screen bg-canvas" />;
 
   return (
-    <main className="min-h-screen bg-canvas">
-      <div className="lg:grid lg:grid-cols-2 lg:min-h-screen">
-        {/* ---- The pitch -------------------------------------------- */}
-        {/* Second on desktop, first on a phone: on a small screen the words
-            and the button have to be above the fold, and the mock-up is what
-            you scroll to. */}
-        <section className="order-1 lg:order-2 flex items-center px-6 sm:px-10 lg:px-14 xl:px-20 py-14 sm:py-20 lg:py-0">
-          <div className="w-full max-w-md mx-auto lg:mx-0 animate-fade-up">
-            {/* Wordmark — the same lockup as the login screen. */}
-            <div className="flex items-center gap-3">
-              <span className="w-12 h-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center shadow-pop shrink-0">
-                <ShieldCheck className="w-6 h-6" />
-              </span>
-              <span>
-                <span className="block text-[10px] font-black uppercase tracking-[0.22em] text-brand-700">
-                  Dawrak
-                </span>
-                <span className="block text-[11px] font-semibold text-ink-muted mt-0.5">
-                  Media &amp; Information Literacy
-                </span>
-              </span>
-            </div>
+    <div className="relative min-h-screen bg-canvas overflow-hidden flex flex-col justify-center">
+      <Doodles />
 
-            <h1 className="text-[34px] sm:text-[42px] lg:text-[40px] xl:text-[46px] font-black text-ink tracking-tight leading-[1.08] mt-9">
+      <main className="relative w-full max-w-md mx-auto px-4 py-8 sm:py-10">
+        {/* ---- Who this is ------------------------------------------- */}
+        <div className="text-center mb-5">
+          {/* The robot from the avatar set. It already carries the brand violet
+              disc, so it needs a white ring to sit on the canvas, nothing more. */}
+          <span className="inline-block rounded-full bg-surface ring-4 ring-brand-100 shadow-lift overflow-hidden">
+            <Image
+              src={avatarPath("profile-pic-5.png")}
+              alt=""
+              width={92}
+              height={92}
+              priority
+              className="w-[92px] h-[92px] object-cover"
+            />
+          </span>
+
+          <h1 className="text-4xl font-black text-ink tracking-tight mt-3">
+            Dawrak
+          </h1>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-700 mt-2">
+            Media &amp; Information Literacy
+          </p>
+        </div>
+
+        {/* ---- What it does ------------------------------------------ */}
+        <div className="bg-surface border border-line rounded-2xl shadow-lift p-5 sm:p-6 space-y-5 animate-fade-up">
+          <div className="text-center">
+            <h2 className="text-2xl font-black text-ink leading-snug tracking-tight">
               Learn by doing.
               <br />
               Teach by sharing.
-            </h1>
-
-            <p className="text-base sm:text-lg text-ink-soft leading-relaxed mt-5">
+            </h2>
+            <p className="text-sm text-ink-muted mt-2 leading-relaxed">
               Build media literacy through real situations — then pass what you
               learn forward.
             </p>
+          </div>
 
-            <LinkButton
-              href="/login"
-              size="lg"
-              iconRight={ArrowRight}
-              className="mt-9 w-full sm:w-auto sm:px-10"
-            >
+          <ul className="space-y-3 border-t border-line pt-5">
+            {LOOP.map((step) => {
+              const Icon = step.icon;
+              return (
+                <li key={step.title} className="flex items-start gap-3">
+                  <span
+                    className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${step.tile}`}
+                  >
+                    <Icon className={`w-4 h-4 ${step.ink}`} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-extrabold text-ink leading-tight">
+                      {step.title}
+                    </span>
+                    <span className="block text-xs text-ink-muted mt-1 leading-relaxed">
+                      {step.body}
+                    </span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="border-t border-line pt-5">
+            <LinkButton href="/login" size="lg" iconRight={ArrowRight} full>
               Get Started
             </LinkButton>
-
-            {/* The whole loop in one line. Three cards here would say the same
-                thing and cost a third of the screen. */}
-            <p className="text-xs font-semibold text-ink-muted mt-7 tracking-wide">
-              Ten real modules · Mentor someone · Watch your reach grow
+            <p className="text-[11px] text-ink-muted text-center mt-3">
+              It takes about a minute to get started.
             </p>
           </div>
-        </section>
+        </div>
+      </main>
+    </div>
+  );
+}
 
-        {/* ---- The app ---------------------------------------------- */}
-        <section className="order-2 lg:order-1 relative bg-brand-700 overflow-hidden flex items-center justify-center px-6 py-16 lg:py-20 lg:[clip-path:polygon(0_0,100%_0,93%_100%,0_100%)]">
-          {/* Two shapes, both from the palette, both behind the phone. They
-              frame it; they are not the composition. The square is desktop-only
-              — on a phone-width screen the panel is already narrow enough that a
-              second shape just crowds the handset. */}
-          <span
-            aria-hidden
-            className="absolute w-[340px] h-[340px] sm:w-[420px] sm:h-[420px] rounded-full bg-brand-800 -translate-y-6 lg:-translate-x-6"
+/** Quiet background art. Decorative only — hidden from assistive tech.
+ *  Same treatment as login and onboarding, so the three screens read as one. */
+function Doodles() {
+  const items = [
+    { src: "magnifying-glass", cls: "top-[7%] -left-6 w-28 rotate-[-12deg]" },
+    { src: "light-bulb", cls: "top-[20%] -right-5 w-24 rotate-[10deg]" },
+    { src: "speech-bubble", cls: "bottom-[14%] -left-5 w-24 rotate-[8deg]" },
+    { src: "paper-plane", cls: "bottom-[22%] -right-6 w-28 rotate-[-8deg]" },
+  ];
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.14]">
+      {items.map((d) => (
+        <div key={d.src} className={`absolute ${d.cls}`}>
+          <Image
+            src={`/assets/doodles/${d.src}.png`}
+            alt=""
+            width={140}
+            height={140}
+            className="w-full h-auto"
           />
-          <span
-            aria-hidden
-            className="hidden lg:block absolute left-[6%] top-[6%] w-20 h-20 rounded-2xl border-2 border-brand-500 rotate-12"
-          />
-
-          <div className="relative animate-fade-up">
-            <AppPreview />
-          </div>
-        </section>
-      </div>
-    </main>
+        </div>
+      ))}
+    </div>
   );
 }
