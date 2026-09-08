@@ -1,5 +1,8 @@
 # Dawrak - Media & Information Literacy App
 
+Live Demo⬇️
+ https://dawrak-w86u.vercel.app/
+
 Welcome to **Dawrak** (دورك — "your turn"), a dynamic Media and Information Literacy (MIL) application developed for the UNESCO hackathon. This app is designed to help users learn to identify misinformation, verify sources, and resist digital manipulation while tracking their progress through an engaging dashboard.
 
 ## 🚀 What We've Built So Far (Current Status)
